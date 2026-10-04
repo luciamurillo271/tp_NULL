@@ -13,12 +13,12 @@ carpeta_originales = os.path.join(carpeta_principal, "TablasOriginales/")
 carpeta_modelo = os.path.join(carpeta_principal, "TablasModelo/")
 
 nacidos_10 = pd.read_csv(carpeta_originales+"nacweb10.csv", encoding="latin-1")
-nacidos_22 = pd.read_csv(carpeta_originales+"nacweb22_0.csv")
+nacidos_22 = pd.read_csv(carpeta_originales+"nacweb22_0.csv", sep = ";")
 
 establecimientos_de_salud = pd.read_excel(carpeta_originales+"establecimientos-asistenciales-asentados-registro-federal-refes-20220404.xlsx")
 
-censo_10 = pd.read_excel(carpeta_originales+"censo2010.xlsx", skiprows=15)
-censo_22 = pd.read_excel(carpeta_originales+"censo2022.xlsx", skiprows=15)
+censo_10 = pd.read_excel(carpeta_originales+"censo2010.xlsx",header=None)
+censo_22 = pd.read_excel(carpeta_originales+"censo2022.xlsx", header=None)
 
 
 #%%-----------------------------------------------------------------------------------------
@@ -66,31 +66,102 @@ centro_de_salud.to_csv(carpeta_modelo + "centro_de_salud.csv", index=False)
 #LIMPIEZA DE DATOS NACIDOS VIVOS
 
 #columnas que queremos con los nombres que queremos
-nacidos_10 = nacidos_10[["IMEDAD", "PROVRES", "IMINSTRUC", "TIPPARTO", "ITIEMGEST", "IPESONAC", "CUENTA"]].copy()
+nacidos_10 = nacidos_10[["IMEDAD", "PROVRES", "IMINSTRUC", "ITIEMGEST", "IPESONAC", "CUENTA"]].copy()
 nacidos_10["año"] = 2010
 nacidos_10 = nacidos_10.rename(columns={
     "IMEDAD" : "rango_edad_madre",
     "PROVRES" : "id_provincia",
     "IMINSTRUC": "nivel_instruccion_madre",
-    "TIPPARTO": "tipo_parto",
     "ITIEMGEST": "tipo_gestacion",
     "IPESONAC": "peso_hijo",
     "CUENTA": "cantidad"
     })
 #queremos sacar el numero antes del rango etario, str split parte el texto en el punto, tomamos la segunda parte
 nacidos_10["rango_edad_madre"] = nacidos_10["rango_edad_madre"].str.split(".", n=1).str[1]
-
+nacidos_10["nivel_instruccion_madre"] = nacidos_10["nivel_instruccion_madre"].str.split(".", n=1).str[1]
+nacidos_10["tipo_gestacion"] = nacidos_10["tipo_gestacion"].str.split(".", n=1).str[1]
+nacidos_10["peso_hijo"] = nacidos_10["peso_hijo"].str.split(".", n=1).str[1]
+#print(nacidos_10)
 
 #algunas preguntas
 print(nacidos_10.shape)
 print(nacidos_10.dtypes)
 print(nacidos_10.isna().sum()) # no hay nulls explicitos
 print(nacidos_10["rango_edad_madre"].value_counts(dropna=False).sort_index())
+
+#borramos filas con "sin especificar"
+columnas = nacidos_10.columns.tolist()
+for col in columnas:
+    nacidos_10[col] = nacidos_10[col].replace('Sin especificar', None)
+nacidos_10 = nacidos_10.dropna()
+
+print(nacidos_10)
+
+print(nacidos_10.shape)
+print(nacidos_10.dtypes)
+print(nacidos_10.isna().sum()) # no hay nulls explicitos
+print(nacidos_10["rango_edad_madre"].value_counts(dropna=False).sort_index())
+#print(nacidos_22.shape())
+
+#%%--------------
+#LIMPIEZA NACIDOS VIVOS 22
+#columnas que queremos con los nombres que queremos
+print(nacidos_22.shape)
+nacidos_22 = nacidos_22[["IMEDAD", "PROVRES", "IMINSTRUC", "ITIEMGEST", "IPESONAC", "CUENTA"]].copy()
+nacidos_22["año"] = 2022
+nacidos_22 = nacidos_22.rename(columns={
+    "IMEDAD" : "rango_edad_madre",
+    "PROVRES" : "id_provincia",
+    "IMINSTRUC": "nivel_instruccion_madre",
+    "ITIEMGEST": "tipo_gestacion",
+    "IPESONAC": "peso_hijo",
+    "CUENTA": "cantidad"
+    })
+#queremos sacar el numero antes del rango etario, str split parte el texto en el punto, tomamos la segunda parte
+nacidos_22["rango_edad_madre"] = nacidos_22["rango_edad_madre"].str.split(".", n=1).str[1]
+nacidos_22["nivel_instruccion_madre"] = nacidos_22["nivel_instruccion_madre"].str.split(".", n=1).str[1]
+nacidos_22["tipo_gestacion"] = nacidos_22["tipo_gestacion"].str.split(".", n=1).str[1]
+nacidos_22["peso_hijo"] = nacidos_22["peso_hijo"].str.split(".", n=1).str[1]
+#print(nacidos_22)
+
+#algunas preguntas
+print(nacidos_22.shape)
+print(nacidos_22.dtypes)
+print(nacidos_22.isna().sum()) # no hay nulls explicitos
+print(nacidos_22["rango_edad_madre"].value_counts(dropna=False).sort_index())
+
+#borramos filas con "sin especificar"
+columnas = nacidos_22.columns.tolist()
+for col in columnas:
+    nacidos_22[col] = nacidos_22[col].replace('Sin especificar', None)
+nacidos_22 = nacidos_22.dropna()
+
+print(nacidos_22)
+
+print(nacidos_22.shape)
+print(nacidos_22.dtypes)
+print(nacidos_22.isna().sum()) # no hay nulls explicitos
+print(nacidos_22["rango_edad_madre"].value_counts(dropna=False).sort_index())
+
+#%%
+#JOIN TABLAS NACIDOS VIVOS
+nacimiento = """
+    SELECT * 
+    FROM nacidos_10, 
+    UNION 
+    SELECT * 
+    FROM nacidos_22
+"""
+nacimientos_df = dd.sql(nacimiento).df()
+print(nacimientos_df)
+nacimientos_df.to_csv(carpeta_modelo + "nacimiento.csv", index=False)
 #%%---------------------------------------------------------------------------------------------
 #LIMPIEZA DE DATOS CENSOS
-
-
-
+print(censo_10.shape)
+#print(censo_10.head(40))
+columnas = censo_10.columns.tolist()
+print(columnas)
+censo_10.columns = []
 #%%-----------------------------------------------------------------------------------------------
 #creamos tabla provincia a partir de datos de establecimientos de salud
 
