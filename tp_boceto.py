@@ -159,9 +159,41 @@ nacimientos_df.to_csv(carpeta_modelo + "nacimiento.csv", index=False)
 #LIMPIEZA DE DATOS CENSOS
 print(censo_10.shape)
 #print(censo_10.head(40))
-columnas = censo_10.columns.tolist()
-print(columnas)
-censo_10.columns = []
+#columnas = censo_10.columns.tolist()
+#print(columnas)
+censo_10 = censo_10.iloc[:,1:6]
+censo_10.columns = ["bloque", "edad","varon","mujer","total"]
+#print(censo_10.head(120))
+
+textos = censo_10["bloque"].fillna("").astype(str).str.strip().tolist()   # la columna de títulos, como lista de textos
+
+area_actual = None           # el área que estamos recorriendo
+cobertura_actual = None      # la cobertura que estamos recorriendo
+texto_anterior = ""          # lo que decía la fila de arriba
+
+lista_area = []
+lista_cobertura = []
+
+for texto in textos:
+    # Si la fila es un título de área, nos acordamos del código (sin "AREA # ")
+    if texto.startswith("AREA #"):
+        area_actual = texto.replace("AREA # ", "")
+
+    # Si la fila de arriba decía "Cobertura de salud", esta fila es el nombre de la cobertura
+    if texto_anterior == "Cobertura de salud":
+        cobertura_actual = texto
+
+    # En cada fila anotamos lo que "recordamos" hasta ahora
+    lista_area.append(area_actual)
+    lista_cobertura.append(cobertura_actual)
+
+    texto_anterior = texto
+
+censo_10["area"] = lista_area
+censo_10["cobertura"] = lista_cobertura
+
+print(censo_10.head(40))
+
 #%%-----------------------------------------------------------------------------------------------
 #creamos tabla provincia a partir de datos de establecimientos de salud
 
@@ -192,6 +224,11 @@ provincia = provincia.reset_index(drop=True)
 
 provincia.to_csv(carpeta_modelo + "provincia.csv", index=False)
 
+#%%
+#LEEMOS NUESTRAS TABLAS
+nacimiento = pd.read_csv(carpeta_modelo+"nacimiento.csv")
+provincia = pd.read_csv(carpeta_modelo+"provincia.csv")
+
 
 #%%---------------------------------------------------------------------------------------------
 # BOCETO CONSULTA ii)
@@ -215,6 +252,35 @@ print(dd.sql("""
 print(centro_de_salud.loc[centro_de_salud["tipologia_nombre"].str.contains("terapia intensiva"),
                           "tipologia_nombre"].value_counts())
 
+#%%
+#CONSULTA 3
+nacidos_por_provincia_y_edad_madre = """
+    SELECT id_provincia, rango_edad_madre, año, SUM(cantidad) AS cantidad_total
+    FROM nacimiento
+    GROUP BY id_provincia, rango_edad_madre, año
+    ORDER BY id_provincia, rango_edad_madre
+"""
+nacidos_total_df = dd.sql(nacidos_por_provincia_y_edad_madre).df()
+print(nacidos_total_df)
 
+cant_bajo_peso_por_prov_y_edad_madre = """
+    SELECT id_provincia, rango_edad_madre, año, SUM(cantidad) AS cantidad
+    FROM nacimiento
+    WHERE peso_hijo = 'Menos de 2500 gramos'
+    GROUP BY id_provincia, rango_edad_madre, año
+    ORDER BY id_provincia, rango_edad_madre
+"""
+bajo_peso_df = dd.sql(cant_bajo_peso_por_prov_y_edad_madre).df()
+print(bajo_peso_df)
 
+consulta3 = """
+    SELECT t.año, t.id_provincia, t.rango_edad_madre, t.cantidad_total, (bp.cantidad*100.0/t.cantidad_total) AS porcentaje_bajo_peso
+    FROM nacidos_total_df AS t
+    JOIN bajo_peso_df AS bp
+    ON t.id_provincia = bp.id_provincia AND t.año = bp.año AND t.rango_edad_madre = bp.rango_edad_madre
+    ORDER BY t.id_provincia, t.rango_edad_madre, t.año
+"""
+consulta_df = dd.sql(consulta3)
+print(consulta_df)
 
+# %%
