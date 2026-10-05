@@ -365,31 +365,7 @@ nacimiento = pd.read_csv(carpeta_modelo+"nacimiento.csv")
 provincia = pd.read_csv(carpeta_modelo+"provincia.csv")
 centro_de_salud = pd.read_csv(carpeta_modelo+"centro_de_salud.csv")
 
-
-#%%---------------------------------------------------------------------------------------------
-# BOCETO CONSULTA ii)
-consulta = """
-                SELECT p.nombre AS provincia, cs.origen_financiamiento, COUNT(*) AS cant_con_terapia_intensiva, 
-                FROM centro_de_salud AS cs
-                JOIN provincia AS p
-                ON cs.provincia_id = p.id
-                WHERE tipologia_nombre LIKE '%terapia intensiva%' AND cs.origen_financiamiento IN ('Estatal', 'Privado')
-                GROUP BY p.nombre, cs.origen_financiamiento
-                ORDER BY p.nombre, cs.origen_financiamiento
-            """
-consulta_df = dd.sql(consulta).df()
-print(consulta_df)
-
-
-'''
-print(dd.sql("""
-    SELECT COUNT(*) FROM centro_de_salud
-    WHERE tipologia_nombre LIKE '%terapia intensiva%' AND origen_financiamiento IN ('Estatal', 'Privado')
-""").df())
-'''
-#print(centro_de_salud.loc[centro_de_salud["tipologia_nombre"].str.contains("terapia intensiva"),"tipologia_nombre"].value_counts())
-
-#%%
+#%%----------------------------------------------------------------------------------
 #CONSULTA 1
 cant_habitantes_con_sin_cober_2010_SQL = """
     SELECT id_provincia, grupo_etario, 
@@ -428,38 +404,96 @@ cant_habitantes_con_sin_cobertura = dd.sql(cant_habitantes_con_sin_cobertura_SQL
 print("HABITANTE")
 print(cant_habitantes_con_sin_cobertura)
 
-#%%
+#%%---------------------------------------------------------------------------------------------
+# BOCETO CONSULTA 2)
+consulta = """
+                SELECT p.nombre AS provincia, cs.origen_financiamiento, COUNT(*) AS cant_con_terapia_intensiva, 
+                FROM centro_de_salud AS cs
+                JOIN provincia AS p
+                ON cs.provincia_id = p.id
+                WHERE tipologia_nombre LIKE '%terapia intensiva%' AND cs.origen_financiamiento IN ('Estatal', 'Privado')
+                GROUP BY p.nombre, cs.origen_financiamiento
+                ORDER BY p.nombre, cs.origen_financiamiento
+            """
+consulta_df = dd.sql(consulta).df()
+print(consulta_df)
+
+
+'''
+print(dd.sql("""
+    SELECT COUNT(*) FROM centro_de_salud
+    WHERE tipologia_nombre LIKE '%terapia intensiva%' AND origen_financiamiento IN ('Estatal', 'Privado')
+""").df())
+'''
+#print(centro_de_salud.loc[centro_de_salud["tipologia_nombre"].str.contains("terapia intensiva"),"tipologia_nombre"].value_counts())
+
+#%%--------------------------------------------------------------------------------
 #CONSULTA 3
-nacidos_por_provincia_y_edad_madre = """
+nacidos_por_provincia_y_edad_madre_SQL = """
     SELECT id_provincia, rango_edad_madre, año, SUM(cantidad) AS cantidad_total
     FROM nacimiento
     GROUP BY id_provincia, rango_edad_madre, año
     ORDER BY id_provincia, rango_edad_madre
 """
-nacidos_total_df = dd.sql(nacidos_por_provincia_y_edad_madre).df()
-print(nacidos_total_df)
+nacidos_total = dd.sql(nacidos_por_provincia_y_edad_madre_SQL).df()
+print(nacidos_total)
 
-cant_bajo_peso_por_prov_y_edad_madre = """
+cant_bajo_peso_por_prov_y_edad_madre_SQL = """
     SELECT id_provincia, rango_edad_madre, año, SUM(cantidad) AS cantidad
     FROM nacimiento
     WHERE peso_hijo = 'Menos de 2500 gramos'
     GROUP BY id_provincia, rango_edad_madre, año
     ORDER BY id_provincia, rango_edad_madre
 """
-bajo_peso_df = dd.sql(cant_bajo_peso_por_prov_y_edad_madre).df()
-print(bajo_peso_df)
+bajo_peso = dd.sql(cant_bajo_peso_por_prov_y_edad_madre_SQL).df()
+print(bajo_peso)
 
 consulta3 = """
     SELECT t.año, t.id_provincia, t.rango_edad_madre, t.cantidad_total, ROUND(bp.cantidad*100.0/t.cantidad_total, 2) AS porcentaje_bajo_peso
-    FROM nacidos_total_df AS t
-    JOIN bajo_peso_df AS bp
+    FROM nacidos_total AS t
+    JOIN bajo_peso AS bp
     ON t.id_provincia = bp.id_provincia AND t.año = bp.año AND t.rango_edad_madre = bp.rango_edad_madre
     ORDER BY t.id_provincia, t.rango_edad_madre, t.año
 """
 consulta_df = dd.sql(consulta3).df()
 print(consulta_df)
 
-# %%
+#%%--------------------------------------------------------------------------------
+#CONSULTA 4
+
+edad_fertil = ['15 a 19', '20 a 24', '25 a 29', '30 a 34', '35 a 39', '40 a 44', '45 a 49']
+
+mujeres_2022_SQL = """
+    SELECT id_provincia, grupo_etario, SUM(cantidad) AS cant_mujeres
+    FROM habitante
+    WHERE año = 2022 AND grupo_etario IN ('15 a 19', '20 a 24', '25 a 29', '30 a 34', '35 a 39', '40 a 44', '45 a 49') AND sexo = 'mujer'
+    GROUP BY id_provincia, grupo_etario
+"""
+mujeres_2022 = dd.sql(mujeres_2022_SQL).df()
+
+nacidos_2022_SQL = """
+    SELECT id_provincia, rango_edad_madre AS grupo_etario, SUM(cantidad) AS cant_nacidos
+    FROM nacimiento
+    WHERE año = 2022
+    GROUP BY id_provincia, grupo_etario
+
+"""
+nacidos_2022 = dd.sql(nacidos_2022_SQL).df()
+
+tasa_fecundidad_2022_SQL = """
+    SELECT p.nombre AS provincia, m.grupo_etario AS grupo_etario, 
+    ROUND(n.cant_nacidos/m.cant_mujeres*1000, 2) AS tasa_fecundidad
+    FROM mujeres_2022 AS m
+    JOIN nacidos_2022 AS n
+    ON m.id_provincia = n.id_provincia AND m.grupo_etario = n.grupo_etario
+    JOIN provincia AS p
+    ON p.id = m.id_provincia 
+    ORDER BY p.nombre, m.grupo_etario
+"""
+tasa_fecundidad_2022 = dd.sql(tasa_fecundidad_2022_SQL).df()
+print(tasa_fecundidad_2022)
+
+#%%---------------------------------------------------------------------------------
 #CONSULTA 5
 porcentaje_madres_menores_2022 = """
     WITH cantidades_22 AS (
