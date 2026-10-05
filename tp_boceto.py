@@ -63,7 +63,7 @@ centro_de_salud.to_csv(carpeta_modelo + "centro_de_salud.csv", index=False)
 
 
 #%%-------------------------------------------------------------------------------------------
-#LIMPIEZA DE DATOS NACIDOS VIVOS
+#LIMPIEZA DE DATOS NACIDOS VIVOS 10
 
 #columnas que queremos con los nombres que queremos
 nacidos_10 = nacidos_10[["IMEDAD", "PROVRES", "IMINSTRUC", "ITIEMGEST", "IPESONAC", "CUENTA"]].copy()
@@ -223,6 +223,20 @@ provincia = provincia.reset_index(drop=True)
     
 
 provincia.to_csv(carpeta_modelo + "provincia.csv", index=False)
+
+#%%-----------------------------------------------------------------------------------------------
+#creamos tabla departamento a partir de datos de establecimientos de salud
+departamentoSQL = """
+                SELECT DISTINCT "departamento_id" AS id, "departamento_nombre" AS nombre, "provincia_id" AS provincia_id
+                FROM establecimientos_de_salud
+                ORDER BY id
+                
+            """
+departamento = dd.sql(departamentoSQL).df()
+
+
+
+departamento.to_csv(carpeta_modelo + "departamento.csv", index=False)
 
 #%%
 #LEEMOS NUESTRAS TABLAS
