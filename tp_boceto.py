@@ -271,8 +271,8 @@ totales = ["Total"]
 censo_22["tiene_cobertura"] = "Tiene"
 censo_22.loc[censo_22["cobertura"].isin(sin_cobertura), "tiene_cobertura"] = "No tiene"
 censo_22.loc[censo_22["cobertura"].isin(totales), "tiene_cobertura"] = None
-print(censo_22.shape)
-print(censo_22.tail(20))
+#print(censo_22.shape)
+#print(censo_22.tail(20))
 censo_22 = censo_22.drop(columns=["bloque", "cobertura","total"])
 censo_22 = censo_22.dropna()
 
@@ -297,12 +297,12 @@ censo_22.loc[censo_22["edad"] >= 100, "grupo_etario"] = "100 y más"
 
 censo_22 = censo_22.drop(columns=["edad", "edad_inicio","edad_fin"])
 censo_22["año"] = 2022
-print(censo_22.tail(20))
+#print(censo_22.tail(20))
 
 #%%------------------------------------------------------------------------------
 # Joineamos censos 10 y censos 22
 
-habitante = """
+habitanteSQL = """
     SELECT * 
     FROM censo_10, 
     UNION 
@@ -310,8 +310,10 @@ habitante = """
     FROM censo_22
     ORDER BY id_provincia, grupo_etario, año
 """
-habitante = dd.sql(habitante).df()
-print(habitante)
+
+habitante = dd.sql(habitanteSQL).df()
+habitante["cantidad"] = pd.to_numeric(habitante["cantidad"], errors="coerce")
+#print(habitante)
 habitante.to_csv(carpeta_modelo + "habitante.csv", index=False)
 #%%-----------------------------------------------------------------------------------------------
 #creamos tabla provincia a partir de datos de establecimientos de salud
@@ -387,6 +389,44 @@ print(dd.sql("""
 '''
 #print(centro_de_salud.loc[centro_de_salud["tipologia_nombre"].str.contains("terapia intensiva"),"tipologia_nombre"].value_counts())
 
+#%%
+#CONSULTA 1
+cant_habitantes_con_sin_cober_2010_SQL = """
+    SELECT id_provincia, grupo_etario, 
+    SUM(CASE WHEN año = 2010 AND tiene_cobertura = 'Tiene' THEN cantidad ELSE 0 END) AS con_cobertura,
+    SUM(CASE WHEN año = 2010 AND tiene_cobertura = 'No tiene' THEN cantidad ELSE 0 END) AS sin_cobertura
+    FROM habitante
+    GROUP BY id_provincia, grupo_etario
+"""
+cant_habitantes_con_sin_cober_2010 = dd.sql(cant_habitantes_con_sin_cober_2010_SQL).df()
+
+cant_habitantes_con_sin_cober_2022_SQL = """
+    SELECT id_provincia, grupo_etario, 
+    SUM(CASE WHEN año = 2022 AND tiene_cobertura = 'Tiene' THEN cantidad ELSE 0 END) AS con_cobertura,
+    SUM(CASE WHEN año = 2022 AND tiene_cobertura = 'No tiene' THEN cantidad ELSE 0 END) AS sin_cobertura
+    FROM habitante
+    GROUP BY id_provincia, grupo_etario
+"""
+cant_habitantes_con_sin_cober_2022 = dd.sql(cant_habitantes_con_sin_cober_2022_SQL).df()
+
+
+cant_habitantes_con_sin_cobertura_SQL = """
+    SELECT p.nombre AS provincia, h10.grupo_etario AS grupo_etario, 
+    h10.con_cobertura AS Habitantes_con_cobertura_en_2010, 
+    h10.sin_cobertura AS Habitantes_sin_cobertura_en_2010, 
+    h22.con_cobertura AS Habitantes_con_cobertura_en_2022, 
+    h22.sin_cobertura AS Habitantes_sin_cobertura_en_2022
+    FROM cant_habitantes_con_sin_cober_2010 AS h10
+    JOIN cant_habitantes_con_sin_cober_2022 AS h22
+    ON h10.grupo_etario = h22.grupo_etario AND h10.id_provincia = h22.id_provincia
+    JOIN provincia AS p
+    ON p.id = h10.id_provincia
+    GROUP BY p.nombre, h10.grupo_etario, Habitantes_con_cobertura_en_2010, Habitantes_sin_cobertura_en_2010, Habitantes_con_cobertura_en_2022, Habitantes_sin_cobertura_en_2022
+    ORDER BY p.nombre, h10.grupo_etario
+"""
+cant_habitantes_con_sin_cobertura = dd.sql(cant_habitantes_con_sin_cobertura_SQL).df()
+print("HABITANTE")
+print(cant_habitantes_con_sin_cobertura)
 
 #%%
 #CONSULTA 3
