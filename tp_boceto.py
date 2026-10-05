@@ -93,6 +93,8 @@ print(nacidos_10["rango_edad_madre"].value_counts(dropna=False).sort_index())
 columnas = nacidos_10.columns.tolist()
 for col in columnas:
     nacidos_10[col] = nacidos_10[col].replace('Sin especificar', None)
+nacidos_10["id_provincia"] = nacidos_10["id_provincia"].replace('98', None)
+nacidos_10["id_provincia"] = nacidos_10["id_provincia"].replace('99', None)
 nacidos_10 = nacidos_10.dropna()
 
 print(nacidos_10)
@@ -134,6 +136,8 @@ print(nacidos_22["rango_edad_madre"].value_counts(dropna=False).sort_index())
 columnas = nacidos_22.columns.tolist()
 for col in columnas:
     nacidos_22[col] = nacidos_22[col].replace('Sin especificar', None)
+#nacidos_22["id_provincia"] = nacidos_22["id_provincia"].replace('98', None)
+#nacidos_22["id_provincia"] = nacidos_22["id_provincia"].replace('99', None)
 nacidos_22 = nacidos_22.dropna()
 
 print(nacidos_22)
@@ -151,8 +155,10 @@ nacimiento = """
     UNION 
     SELECT * 
     FROM nacidos_22
+    ORDER BY id_provincia, rango_edad_madre, año
 """
 nacimientos_df = dd.sql(nacimiento).df()
+nacimientos_df = nacimientos_df[~nacimientos_df["id_provincia"].astype(str).isin(['98', '99'])]
 print(nacimientos_df)
 nacimientos_df.to_csv(carpeta_modelo + "nacimiento.csv", index=False)
 #%%---------------------------------------------------------------------------------------------
@@ -166,21 +172,20 @@ censo_10.columns = ["bloque", "edad","varon","mujer","total"]
 #print(censo_10.head(120))
 
 textos = censo_10["bloque"].fillna("").astype(str).str.strip().tolist()   # la columna de títulos, como lista de textos
-
+print(textos[:100])
 area_actual = None           # el área que estamos recorriendo
 cobertura_actual = None      # la cobertura que estamos recorriendo
 texto_anterior = ""          # lo que decía la fila de arriba
 
 lista_area = []
 lista_cobertura = []
+coberturas = ["Obra social (incluye PAMI)", "Prepaga a través de obra social", "Prepaga sólo por contratación voluntaria", "Programas o planes estatales de salud", "No tiene obra social, prepaga o plan estatal", "Total"]
 
 for texto in textos:
     # Si la fila es un título de área, nos acordamos del código (sin "AREA # ")
     if texto.startswith("AREA #"):
         area_actual = texto.replace("AREA # ", "")
-
-    # Si la fila de arriba decía "Cobertura de salud", esta fila es el nombre de la cobertura
-    if texto_anterior == "Cobertura de salud":
+    elif texto in coberturas:
         cobertura_actual = texto
 
     # En cada fila anotamos lo que "recordamos" hasta ahora
@@ -189,11 +194,125 @@ for texto in textos:
 
     texto_anterior = texto
 
-censo_10["area"] = lista_area
+print(lista_cobertura[:100])
+print(lista_cobertura[15600:])
+
+censo_10["id_provincia"] = lista_area
 censo_10["cobertura"] = lista_cobertura
+print(censo_10["cobertura"].value_counts())
 
-print(censo_10.head(40))
+sin_cobertura = ["No tiene obra social, prepaga o plan estatal"]
+totales = ["Total"]
+censo_10["tiene_cobertura"] = "Tiene"
+censo_10.loc[censo_10["cobertura"].isin(sin_cobertura), "tiene_cobertura"] = "No tiene"
+censo_10.loc[censo_10["cobertura"].isin(totales), "tiene_cobertura"] = None
+print(censo_10.shape)
+print(censo_10.tail(20))
+censo_10 = censo_10.drop(columns=["bloque", "cobertura","total"])
+censo_10 = censo_10.dropna()
 
+
+varones = censo_10[["id_provincia", "edad", "varon","tiene_cobertura"]].rename(columns={"varon":"cantidad"})
+varones["sexo"] = "varon"
+
+mujeres = censo_10[["id_provincia", "edad", "mujer","tiene_cobertura"]].rename(columns={"mujer":"cantidad"})
+mujeres["sexo"] = "mujer"
+
+censo_10 = pd.concat([varones, mujeres], ignore_index=True)
+
+censo_10["edad"] = pd.to_numeric(censo_10["edad"], errors="coerce")
+censo_10 = censo_10.dropna(subset=["edad"])
+censo_10["edad"] = censo_10["edad"].astype(int)
+
+censo_10["edad_inicio"] = (censo_10["edad"] // 5) * 5
+censo_10["edad_fin"] = censo_10["edad_inicio"] + 4
+
+censo_10["grupo_etario"] = (censo_10["edad_inicio"].astype(str) + " a " + censo_10["edad_fin"].astype(str))
+censo_10.loc[censo_10["edad"] >= 100, "grupo_etario"] = "100 y más"
+
+censo_10 = censo_10.drop(columns=["edad", "edad_inicio","edad_fin"])
+censo_10["año"] = 2010
+print(censo_10.tail(20))
+
+#%%
+print(censo_22.shape)
+censo_22 = censo_22.iloc[:,1:6]
+censo_22.columns = ["bloque", "edad","varon","mujer","total"]
+
+textos = censo_22["bloque"].fillna("").astype(str).str.strip().tolist()   # la columna de títulos, como lista de textos
+print(textos[:100])
+area_actual = None           # el área que estamos recorriendo
+cobertura_actual = None      # la cobertura que estamos recorriendo
+texto_anterior = ""          # lo que decía la fila de arriba
+
+lista_area = []
+lista_cobertura = []
+coberturas = ["Obra social o prepaga (incluye PAMI)", "Programas o planes estatales de salud", "No tiene obra social, prepaga ni plan estatal", "Total"]
+
+for texto in textos:
+    # Si la fila es un título de área, nos acordamos del código (sin "AREA # ")
+    if texto.startswith("AREA #"):
+        area_actual = texto.replace("AREA # ", "")
+    elif texto in coberturas:
+        cobertura_actual = texto
+
+    # En cada fila anotamos lo que "recordamos" hasta ahora
+    lista_area.append(area_actual)
+    lista_cobertura.append(cobertura_actual)
+
+    texto_anterior = texto
+
+censo_22["id_provincia"] = lista_area
+censo_22["cobertura"] = lista_cobertura
+print(censo_22["cobertura"].value_counts())
+
+sin_cobertura = ["No tiene obra social, prepaga ni plan estatal"]
+totales = ["Total"]
+censo_22["tiene_cobertura"] = "Tiene"
+censo_22.loc[censo_22["cobertura"].isin(sin_cobertura), "tiene_cobertura"] = "No tiene"
+censo_22.loc[censo_22["cobertura"].isin(totales), "tiene_cobertura"] = None
+print(censo_22.shape)
+print(censo_22.tail(20))
+censo_22 = censo_22.drop(columns=["bloque", "cobertura","total"])
+censo_22 = censo_22.dropna()
+
+
+varones = censo_22[["id_provincia", "edad", "varon","tiene_cobertura"]].rename(columns={"varon":"cantidad"})
+varones["sexo"] = "varon"
+
+mujeres = censo_22[["id_provincia", "edad", "mujer","tiene_cobertura"]].rename(columns={"mujer":"cantidad"})
+mujeres["sexo"] = "mujer"
+
+censo_22 = pd.concat([varones, mujeres], ignore_index=True)
+
+censo_22["edad"] = pd.to_numeric(censo_22["edad"], errors="coerce")
+censo_22 = censo_22.dropna(subset=["edad"])
+censo_22["edad"] = censo_22["edad"].astype(int)
+
+censo_22["edad_inicio"] = (censo_22["edad"] // 5) * 5
+censo_22["edad_fin"] = censo_22["edad_inicio"] + 4
+
+censo_22["grupo_etario"] = (censo_22["edad_inicio"].astype(str) + " a " + censo_22["edad_fin"].astype(str))
+censo_22.loc[censo_22["edad"] >= 100, "grupo_etario"] = "100 y más"
+
+censo_22 = censo_22.drop(columns=["edad", "edad_inicio","edad_fin"])
+censo_22["año"] = 2022
+print(censo_22.tail(20))
+
+#%%------------------------------------------------------------------------------
+# Joineamos censos 10 y censos 22
+
+habitante = """
+    SELECT * 
+    FROM censo_10, 
+    UNION 
+    SELECT * 
+    FROM censo_22
+    ORDER BY id_provincia, grupo_etario, año
+"""
+habitante = dd.sql(habitante).df()
+print(habitante)
+habitante.to_csv(carpeta_modelo + "habitante.csv", index=False)
 #%%-----------------------------------------------------------------------------------------------
 #creamos tabla provincia a partir de datos de establecimientos de salud
 
@@ -242,16 +361,17 @@ departamento.to_csv(carpeta_modelo + "departamento.csv", index=False)
 #LEEMOS NUESTRAS TABLAS
 nacimiento = pd.read_csv(carpeta_modelo+"nacimiento.csv")
 provincia = pd.read_csv(carpeta_modelo+"provincia.csv")
+centro_de_salud = pd.read_csv(carpeta_modelo+"centro_de_salud.csv")
 
 
 #%%---------------------------------------------------------------------------------------------
 # BOCETO CONSULTA ii)
 consulta = """
-                SELECT p.nombre, cs.origen_financiamiento, COUNT(*) AS cant_con_terapia_intensiva, 
+                SELECT p.nombre AS provincia, cs.origen_financiamiento, COUNT(*) AS cant_con_terapia_intensiva, 
                 FROM centro_de_salud AS cs
                 JOIN provincia AS p
                 ON cs.provincia_id = p.id
-                WHERE tipologia_nombre LIKE '%terapia intensiva%'
+                WHERE tipologia_nombre LIKE '%terapia intensiva%' AND cs.origen_financiamiento IN ('Estatal', 'Privado')
                 GROUP BY p.nombre, cs.origen_financiamiento
                 ORDER BY p.nombre, cs.origen_financiamiento
             """
@@ -259,12 +379,14 @@ consulta_df = dd.sql(consulta).df()
 print(consulta_df)
 
 
+'''
 print(dd.sql("""
     SELECT COUNT(*) FROM centro_de_salud
-    WHERE tipologia_nombre LIKE '%terapia intensiva%'
+    WHERE tipologia_nombre LIKE '%terapia intensiva%' AND origen_financiamiento IN ('Estatal', 'Privado')
 """).df())
-print(centro_de_salud.loc[centro_de_salud["tipologia_nombre"].str.contains("terapia intensiva"),
-                          "tipologia_nombre"].value_counts())
+'''
+#print(centro_de_salud.loc[centro_de_salud["tipologia_nombre"].str.contains("terapia intensiva"),"tipologia_nombre"].value_counts())
+
 
 #%%
 #CONSULTA 3
@@ -288,13 +410,56 @@ bajo_peso_df = dd.sql(cant_bajo_peso_por_prov_y_edad_madre).df()
 print(bajo_peso_df)
 
 consulta3 = """
-    SELECT t.año, t.id_provincia, t.rango_edad_madre, t.cantidad_total, (bp.cantidad*100.0/t.cantidad_total) AS porcentaje_bajo_peso
+    SELECT t.año, t.id_provincia, t.rango_edad_madre, t.cantidad_total, ROUND(bp.cantidad*100.0/t.cantidad_total, 2) AS porcentaje_bajo_peso
     FROM nacidos_total_df AS t
     JOIN bajo_peso_df AS bp
     ON t.id_provincia = bp.id_provincia AND t.año = bp.año AND t.rango_edad_madre = bp.rango_edad_madre
     ORDER BY t.id_provincia, t.rango_edad_madre, t.año
 """
-consulta_df = dd.sql(consulta3)
+consulta_df = dd.sql(consulta3).df()
 print(consulta_df)
 
+# %%
+#CONSULTA 5
+porcentaje_madres_menores_2022 = """
+    WITH cantidades_22 AS (
+        SELECT id_provincia, SUM(cantidad) AS total_nacidos, 
+        SUM(CASE WHEN rango_edad_madre IN ('Menor de 15','15 a 19') THEN cantidad ELSE 0 END) AS cant_madres_menores_20
+        FROM nacimiento 
+        WHERE año = 2022
+        GROUP BY id_provincia
+    )
+    SELECT id_provincia, (cant_madres_menores_20*100.0/total_nacidos) AS porcentaje_madres_menores_2022
+    FROM cantidades_22
+    ORDER BY id_provincia
+"""
+porcentaje_madres_menores_2022_df = dd.sql(porcentaje_madres_menores_2022).df()
+print(porcentaje_madres_menores_2022_df)
+
+porcentaje_madres_menores_2010 = """
+    WITH cantidades_10 AS (
+        SELECT id_provincia, SUM(cantidad) AS total_nacidos, 
+        SUM(CASE WHEN rango_edad_madre IN ('Menor de 15','15 a 19') THEN cantidad ELSE 0 END) AS cant_madres_menores_20
+        FROM nacimiento 
+        WHERE año = 2010
+        GROUP BY id_provincia
+    )
+    SELECT id_provincia, (cant_madres_menores_20*100.0/total_nacidos) AS porcentaje_madres_menores_2010
+    FROM cantidades_10
+    ORDER BY id_provincia
+"""
+porcentaje_madres_menores_2010_df = dd.sql(porcentaje_madres_menores_2010).df()
+print(porcentaje_madres_menores_2010_df)
+
+cambios_edad_madres = """
+    SELECT p.nombre AS provincia, ROUND(p10.porcentaje_madres_menores_2010 - p22.porcentaje_madres_menores_2022, 2) AS diferencia_porcetaje
+    FROM porcentaje_madres_menores_2022_df AS p22
+    JOIN porcentaje_madres_menores_2010_df AS p10
+    ON p22.id_provincia = p10.id_provincia
+    JOIN provincia AS p
+    ON p.id = p22.id_provincia
+    ORDER BY diferencia_porcetaje DESC
+"""
+cambios_edad_madres_df = dd.sql(cambios_edad_madres).df()
+print(cambios_edad_madres_df)
 # %%
