@@ -62,3 +62,22 @@ q4 = dd.sql(consulta4).df()
 print(q4)
 
 print(len(q1), len(q2), len(q3), len(q4))
+
+
+#%%------------------------------------
+#GQM
+#nacidos vivos
+
+# datos crudos, antes de limpiar
+total = nacidos_10["CUENTA"].sum() 
+# M1: columnas con solo código / columnas categóricas (se cuenta a mano) 
+m1 = 2 / 6 # TIPPARTO y SEXO, de 6 categóricas 
+# M2: nacimientos con "sin especificar" oculto detrás de un código 
+oculto = (nacidos_10["TIPPARTO"] == 9) | (nacidos_10["SEXO"] == 9) 
+m2 = nacidos_10.loc[oculto, "CUENTA"].sum() / total
+ # M3: columnas con código de faltante distinto al 9 / columnas con faltante
+m3 = 3 / 6 
+# gestación (8), instrucción (4) y peso (3), de 6 columnas 
+
+print(total)
+print(m2)

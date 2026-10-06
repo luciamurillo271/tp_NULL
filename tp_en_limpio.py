@@ -10,6 +10,7 @@ import duckdb as dd
 carpeta_principal = os.path.dirname(os.path.abspath(__file__))
 carpeta_originales = os.path.join(carpeta_principal, "TablasOriginales")
 carpeta_modelo = os.path.join(carpeta_principal, "TablasModelo")
+carpeta_consultas = os.path.join(carpeta_principal, "TablasConsultas")
 
 nacidos_10 = pd.read_csv(
     os.path.join(carpeta_originales, "nacweb10.csv"),
@@ -159,6 +160,9 @@ for texto in areas_y_coberturas:
         area_actual = texto.replace("AREA # ", "")
     elif texto in coberturas: # Si la fila es una cobertura, guardamos el texto
         cobertura_actual = texto
+    elif texto == "RESUMEN":
+        area_actual = None
+        cobertura_actual = None
 
     lista_area.append(area_actual)
     lista_cobertura.append(cobertura_actual)
@@ -233,6 +237,9 @@ for texto in areas_y_coberturas:
         area_actual = texto.replace("AREA # ", "")
     elif texto in coberturas: # Si la fila es una cobertura, guardamos el texto
         cobertura_actual = texto
+    elif texto == "RESUMEN":
+        area_actual = None
+        cobertura_actual = None
 
     lista_area.append(area_actual)
     lista_cobertura.append(cobertura_actual)
@@ -370,3 +377,114 @@ nacimiento = pd.read_csv(os.path.join(carpeta_modelo, "nacimiento.csv"))
 provincia = pd.read_csv(os.path.join(carpeta_modelo, "provincia.csv"))
 centro_de_salud = pd.read_csv(os.path.join(carpeta_modelo, "centro_de_salud.csv"))
 departamento = pd.read_csv(os.path.join(carpeta_modelo, "departamento.csv"))
+
+
+#CONSULTAS
+#%%--------------------------------------------------------------------------------------------
+#CONSULTA 1: Cobertura de salud
+cant_habitantes_con_sin_cober_2010_SQL = """
+    SELECT id_provincia, grupo_etario, 
+    SUM(CASE WHEN anio = 2010 AND cobertura = 'Tiene' THEN cantidad ELSE 0 END) AS con_cobertura,
+    SUM(CASE WHEN anio = 2010 AND cobertura = 'No tiene' THEN cantidad ELSE 0 END) AS sin_cobertura
+    FROM habitante
+    GROUP BY id_provincia, grupo_etario
+"""
+cant_habitantes_con_sin_cober_2010 = dd.sql(cant_habitantes_con_sin_cober_2010_SQL).df()
+
+cant_habitantes_con_sin_cober_2022_SQL = """
+    SELECT id_provincia, grupo_etario, 
+    SUM(CASE WHEN anio = 2022 AND cobertura = 'Tiene' THEN cantidad ELSE 0 END) AS con_cobertura,
+    SUM(CASE WHEN anio = 2022 AND cobertura = 'No tiene' THEN cantidad ELSE 0 END) AS sin_cobertura
+    FROM habitante
+    GROUP BY id_provincia, grupo_etario
+"""
+cant_habitantes_con_sin_cober_2022 = dd.sql(cant_habitantes_con_sin_cober_2022_SQL).df()
+
+
+cant_habitantes_con_sin_cobertura_SQL = """
+    SELECT p.nombre AS provincia, h10.grupo_etario AS grupo_etario, 
+    h10.con_cobertura AS Habitantes_con_cobertura_en_2010, 
+    h10.sin_cobertura AS Habitantes_sin_cobertura_en_2010, 
+    h22.con_cobertura AS Habitantes_con_cobertura_en_2022, 
+    h22.sin_cobertura AS Habitantes_sin_cobertura_en_2022
+    FROM cant_habitantes_con_sin_cober_2010 AS h10
+    JOIN cant_habitantes_con_sin_cober_2022 AS h22
+    ON h10.grupo_etario = h22.grupo_etario AND h10.id_provincia = h22.id_provincia
+    JOIN provincia AS p
+    ON p.id = h10.id_provincia
+    GROUP BY p.nombre, h10.grupo_etario, Habitantes_con_cobertura_en_2010, Habitantes_sin_cobertura_en_2010, Habitantes_con_cobertura_en_2022, Habitantes_sin_cobertura_en_2022
+    ORDER BY p.nombre, h10.grupo_etario
+"""
+cant_habitantes_con_sin_cobertura = dd.sql(cant_habitantes_con_sin_cobertura_SQL).df()
+
+cant_habitantes_con_sin_cobertura.to_csv(
+    os.path.join(carpeta_consultas, "Cobertura_de_salud.csv"),
+    index=False)
+
+#%%---------------------------------------------------------------------
+#CONSULTA 2: Establecimientos de salud con terapia intensiva
+establecimientos_privadosSQL = """
+    SELECT provincia_id, COUNT(*) AS cant_con_terapia_intensiva,
+    FROM centro_de_salud
+    WHERE tipologia_nombre LIKE '%terapia intensiva%' AND origen_financiamiento = 'Privado'
+    GROUP BY provincia_id
+"""
+establecimientos_privados = dd.sql(establecimientos_privadosSQL).df()
+
+establecimientos_estatalesSQL = """
+    SELECT provincia_id, COUNT(*) AS cant_con_terapia_intensiva,
+    FROM centro_de_salud
+    WHERE tipologia_nombre LIKE '%terapia intensiva%' AND origen_financiamiento = 'Estatal'
+    GROUP BY provincia_id
+"""
+establecimientos_estatales = dd.sql(establecimientos_estatalesSQL).df()
+
+establecimientos_con_terapia_intensivaSQL = """
+                SELECT p.nombre AS provincia, ep.cant_con_terapia_intensiva AS cantidad_establecimientos_privados, ee.cant_con_terapia_intensiva AS cantidad_establecimientos_estatales
+                FROM establecimientos_privados AS ep
+                JOIN establecimientos_estatales AS ee
+                ON ep.provincia_id = ee.provincia_id
+                JOIN provincia AS p
+                ON ep.provincia_id = p.id
+                GROUP BY p.nombre, cantidad_establecimientos_privados, cantidad_establecimientos_estatales
+                ORDER BY p.nombre
+            """
+establecimientos_con_terapia_intensiva = dd.sql(establecimientos_con_terapia_intensivaSQL).df()
+
+establecimientos_con_terapia_intensiva.to_csv(
+    os.path.join(carpeta_consultas, "Establecimientos_de_salud_con_terapia_intensiva.csv"),
+    index=False)
+
+#%%-----------------------------------------------------------------
+#CONSULTA 3: Caracteristicas de los nacimientos
+nacidos_por_provincia_y_edad_madre_SQL = """
+    SELECT id_provincia, grupo_etario_madre, anio, SUM(cantidad) AS cantidad_total
+    FROM nacimiento
+    GROUP BY id_provincia, grupo_etario_madre, anio
+    ORDER BY id_provincia, grupo_etario_madre
+"""
+nacidos_total = dd.sql(nacidos_por_provincia_y_edad_madre_SQL).df()
+#print(nacidos_total)
+
+cant_bajo_peso_por_prov_y_edad_madre_SQL = """
+    SELECT id_provincia, grupo_etario_madre, anio, SUM(cantidad) AS cantidad
+    FROM nacimiento
+    WHERE peso_bebe = 'Menos de 2500 gramos'
+    GROUP BY id_provincia, grupo_etario_madre, anio
+    ORDER BY id_provincia, grupo_etario_madre
+"""
+bajo_peso = dd.sql(cant_bajo_peso_por_prov_y_edad_madre_SQL).df()
+#print(bajo_peso)
+
+consulta3 = """
+    SELECT t.anio, t.id_provincia, t.grupo_etario_madre, t.cantidad_total AS cantidad_nacimientos, ROUND(bp.cantidad*100.0/t.cantidad_total, 2) AS porcentaje_bajo_peso
+    FROM nacidos_total AS t
+    JOIN bajo_peso AS bp
+    ON t.id_provincia = bp.id_provincia AND t.anio = bp.anio AND t.grupo_etario_madre = bp.grupo_etario_madre
+    ORDER BY t.id_provincia, t.grupo_etario_madre, t.anio
+"""
+consulta_df = dd.sql(consulta3).df()
+consulta_df.to_csv(
+    os.path.join(carpeta_consultas, "Caracteristicas_de_los_nacimientos.csv"),
+    index=False)
+#print(consulta_df)
