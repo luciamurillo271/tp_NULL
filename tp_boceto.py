@@ -67,7 +67,7 @@ centro_de_salud.to_csv(carpeta_modelo + "centro_de_salud.csv", index=False)
 
 #columnas que queremos con los nombres que queremos
 nacidos_10 = nacidos_10[["PROVRES", "IMEDAD", "IMINSTRUC", "ITIEMGEST", "IPESONAC", "CUENTA"]].copy()
-nacidos_10["año"] = 2010
+nacidos_10["anio"] = 2010
 nacidos_10 = nacidos_10.rename(columns={
     "PROVRES" : "id_provincia",
     "IMEDAD" : "rango_edad_madre",
@@ -110,7 +110,7 @@ print(nacidos_10["rango_edad_madre"].value_counts(dropna=False).sort_index())
 #columnas que queremos con los nombres que queremos
 print(nacidos_22.shape)
 nacidos_22 = nacidos_22[["PROVRES", "IMEDAD", "IMINSTRUC", "ITIEMGEST", "IPESONAC", "CUENTA"]].copy()
-nacidos_22["año"] = 2022
+nacidos_22["anio"] = 2022
 nacidos_22 = nacidos_22.rename(columns={
     "PROVRES" : "id_provincia",
     "IMEDAD" : "rango_edad_madre",
@@ -151,11 +151,11 @@ print(nacidos_22["rango_edad_madre"].value_counts(dropna=False).sort_index())
 #JOIN TABLAS NACIDOS VIVOS
 nacimiento = """
     SELECT * 
-    FROM nacidos_10, 
+    FROM nacidos_10 
     UNION 
     SELECT * 
     FROM nacidos_22
-    ORDER BY id_provincia, rango_edad_madre, año
+    ORDER BY id_provincia, rango_edad_madre, anio
 """
 nacimientos_df = dd.sql(nacimiento).df()
 nacimientos_df = nacimientos_df[~nacimientos_df["id_provincia"].astype(str).isin(['98', '99'])]
@@ -231,7 +231,7 @@ censo_10["grupo_etario"] = (censo_10["edad_inicio"].astype(str) + " a " + censo_
 censo_10.loc[censo_10["edad"] >= 100, "grupo_etario"] = "100 y más"
 
 censo_10 = censo_10.drop(columns=["edad", "edad_inicio","edad_fin"])
-censo_10["año"] = 2010
+censo_10["anio"] = 2010
 print(censo_10.tail(20))
 
 #%%-------------------------------------------------------------------------------------------
@@ -296,7 +296,7 @@ censo_22["grupo_etario"] = (censo_22["edad_inicio"].astype(str) + " a " + censo_
 censo_22.loc[censo_22["edad"] >= 100, "grupo_etario"] = "100 y más"
 
 censo_22 = censo_22.drop(columns=["edad", "edad_inicio","edad_fin"])
-censo_22["año"] = 2022
+censo_22["anio"] = 2022
 #print(censo_22.tail(20))
 
 #%%------------------------------------------------------------------------------
@@ -308,7 +308,7 @@ habitanteSQL = """
     UNION 
     SELECT * 
     FROM censo_22
-    ORDER BY id_provincia, grupo_etario, año
+    ORDER BY id_provincia, grupo_etario, anio
 """
 
 habitante = dd.sql(habitanteSQL).df()
@@ -369,8 +369,8 @@ centro_de_salud = pd.read_csv(carpeta_modelo+"centro_de_salud.csv")
 #CONSULTA 1
 cant_habitantes_con_sin_cober_2010_SQL = """
     SELECT id_provincia, grupo_etario, 
-    SUM(CASE WHEN año = 2010 AND tiene_cobertura = 'Tiene' THEN cantidad ELSE 0 END) AS con_cobertura,
-    SUM(CASE WHEN año = 2010 AND tiene_cobertura = 'No tiene' THEN cantidad ELSE 0 END) AS sin_cobertura
+    SUM(CASE WHEN anio = 2010 AND tiene_cobertura = 'Tiene' THEN cantidad ELSE 0 END) AS con_cobertura,
+    SUM(CASE WHEN anio = 2010 AND tiene_cobertura = 'No tiene' THEN cantidad ELSE 0 END) AS sin_cobertura
     FROM habitante
     GROUP BY id_provincia, grupo_etario
 """
@@ -378,8 +378,8 @@ cant_habitantes_con_sin_cober_2010 = dd.sql(cant_habitantes_con_sin_cober_2010_S
 
 cant_habitantes_con_sin_cober_2022_SQL = """
     SELECT id_provincia, grupo_etario, 
-    SUM(CASE WHEN año = 2022 AND tiene_cobertura = 'Tiene' THEN cantidad ELSE 0 END) AS con_cobertura,
-    SUM(CASE WHEN año = 2022 AND tiene_cobertura = 'No tiene' THEN cantidad ELSE 0 END) AS sin_cobertura
+    SUM(CASE WHEN anio = 2022 AND tiene_cobertura = 'Tiene' THEN cantidad ELSE 0 END) AS con_cobertura,
+    SUM(CASE WHEN anio = 2022 AND tiene_cobertura = 'No tiene' THEN cantidad ELSE 0 END) AS sin_cobertura
     FROM habitante
     GROUP BY id_provincia, grupo_etario
 """
@@ -430,30 +430,30 @@ print(dd.sql("""
 #%%--------------------------------------------------------------------------------
 #CONSULTA 3
 nacidos_por_provincia_y_edad_madre_SQL = """
-    SELECT id_provincia, rango_edad_madre, año, SUM(cantidad) AS cantidad_total
+    SELECT id_provincia, rango_edad_madre, anio, SUM(cantidad) AS cantidad_total
     FROM nacimiento
-    GROUP BY id_provincia, rango_edad_madre, año
+    GROUP BY id_provincia, rango_edad_madre, anio
     ORDER BY id_provincia, rango_edad_madre
 """
 nacidos_total = dd.sql(nacidos_por_provincia_y_edad_madre_SQL).df()
 print(nacidos_total)
 
 cant_bajo_peso_por_prov_y_edad_madre_SQL = """
-    SELECT id_provincia, rango_edad_madre, año, SUM(cantidad) AS cantidad
+    SELECT id_provincia, rango_edad_madre, anio, SUM(cantidad) AS cantidad
     FROM nacimiento
     WHERE peso_hijo = 'Menos de 2500 gramos'
-    GROUP BY id_provincia, rango_edad_madre, año
+    GROUP BY id_provincia, rango_edad_madre, anio
     ORDER BY id_provincia, rango_edad_madre
 """
 bajo_peso = dd.sql(cant_bajo_peso_por_prov_y_edad_madre_SQL).df()
 print(bajo_peso)
 
 consulta3 = """
-    SELECT t.año, t.id_provincia, t.rango_edad_madre, t.cantidad_total, ROUND(bp.cantidad*100.0/t.cantidad_total, 2) AS porcentaje_bajo_peso
+    SELECT t.anio, t.id_provincia, t.rango_edad_madre, t.cantidad_total, ROUND(bp.cantidad*100.0/t.cantidad_total, 2) AS porcentaje_bajo_peso
     FROM nacidos_total AS t
     JOIN bajo_peso AS bp
-    ON t.id_provincia = bp.id_provincia AND t.año = bp.año AND t.rango_edad_madre = bp.rango_edad_madre
-    ORDER BY t.id_provincia, t.rango_edad_madre, t.año
+    ON t.id_provincia = bp.id_provincia AND t.anio = bp.anio AND t.rango_edad_madre = bp.rango_edad_madre
+    ORDER BY t.id_provincia, t.rango_edad_madre, t.anio
 """
 consulta_df = dd.sql(consulta3).df()
 print(consulta_df)
@@ -466,7 +466,7 @@ edad_fertil = ['15 a 19', '20 a 24', '25 a 29', '30 a 34', '35 a 39', '40 a 44',
 mujeres_2022_SQL = """
     SELECT id_provincia, grupo_etario, SUM(cantidad) AS cant_mujeres
     FROM habitante
-    WHERE año = 2022 AND grupo_etario IN ('15 a 19', '20 a 24', '25 a 29', '30 a 34', '35 a 39', '40 a 44', '45 a 49') AND sexo = 'mujer'
+    WHERE anio = 2022 AND grupo_etario IN ('15 a 19', '20 a 24', '25 a 29', '30 a 34', '35 a 39', '40 a 44', '45 a 49') AND sexo = 'mujer'
     GROUP BY id_provincia, grupo_etario
 """
 mujeres_2022 = dd.sql(mujeres_2022_SQL).df()
@@ -474,7 +474,7 @@ mujeres_2022 = dd.sql(mujeres_2022_SQL).df()
 nacidos_2022_SQL = """
     SELECT id_provincia, rango_edad_madre AS grupo_etario, SUM(cantidad) AS cant_nacidos
     FROM nacimiento
-    WHERE año = 2022
+    WHERE anio = 2022
     GROUP BY id_provincia, grupo_etario
 
 """
@@ -500,7 +500,7 @@ porcentaje_madres_menores_2022 = """
         SELECT id_provincia, SUM(cantidad) AS total_nacidos, 
         SUM(CASE WHEN rango_edad_madre IN ('Menor de 15','15 a 19') THEN cantidad ELSE 0 END) AS cant_madres_menores_20
         FROM nacimiento 
-        WHERE año = 2022
+        WHERE anio = 2022
         GROUP BY id_provincia
     )
     SELECT id_provincia, (cant_madres_menores_20*100.0/total_nacidos) AS porcentaje_madres_menores_2022
@@ -515,7 +515,7 @@ porcentaje_madres_menores_2010 = """
         SELECT id_provincia, SUM(cantidad) AS total_nacidos, 
         SUM(CASE WHEN rango_edad_madre IN ('Menor de 15','15 a 19') THEN cantidad ELSE 0 END) AS cant_madres_menores_20
         FROM nacimiento 
-        WHERE año = 2010
+        WHERE anio = 2010
         GROUP BY id_provincia
     )
     SELECT id_provincia, (cant_madres_menores_20*100.0/total_nacidos) AS porcentaje_madres_menores_2010

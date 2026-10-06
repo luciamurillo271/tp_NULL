@@ -4,21 +4,38 @@
 import os
 import pandas as pd
 import duckdb as dd
-import openpyxl as oxl
 
 #%%---------------------
 
-carpeta_principal = os.path.dirname(os.path.abspath(__file__)) + "/"
-carpeta_originales = os.path.join(carpeta_principal, "TablasOriginales/")
-carpeta_modelo = os.path.join(carpeta_principal, "TablasModelo/")
+carpeta_principal = os.path.dirname(os.path.abspath(__file__))
+carpeta_originales = os.path.join(carpeta_principal, "TablasOriginales")
+carpeta_modelo = os.path.join(carpeta_principal, "TablasModelo")
 
-nacidos_10 = pd.read_csv(carpeta_originales+"nacweb10.csv", encoding="latin-1")
-nacidos_22 = pd.read_csv(carpeta_originales+"nacweb22_0.csv", sep = ";")
+nacidos_10 = pd.read_csv(
+    os.path.join(carpeta_originales, "nacweb10.csv"),
+    encoding="latin-1"
+)
+nacidos_22 = pd.read_csv(
+    os.path.join(carpeta_originales, "nacweb22_0.csv"),
+    encoding="utf-8-sig",
+    sep=";"
+)
 
-establecimientos_de_salud = pd.read_excel(carpeta_originales+"establecimientos-asistenciales-asentados-registro-federal-refes-20220404.xlsx")
+establecimientos_de_salud = pd.read_excel(
+    os.path.join(
+        carpeta_originales,
+        "establecimientos-asistenciales-asentados-registro-federal-refes-20220404.xlsx"
+    )
+)
 
-censo_10 = pd.read_excel(carpeta_originales+"censo2010.xlsx",header=None)
-censo_22 = pd.read_excel(carpeta_originales+"censo2022.xlsx", header=None)
+censo_10 = pd.read_excel(
+    os.path.join(carpeta_originales, "censo2010.xlsx"),
+    header=None
+)
+censo_22 = pd.read_excel(
+    os.path.join(carpeta_originales, "censo2022.xlsx"),
+    header=None
+)
 
 #%%-----------------------------------------------------------------------------------------
 # LIMPIEZA DE DATOS CENTROS DE SALUD
@@ -40,14 +57,17 @@ centro_de_salud.loc[columna_original.isin(otro_mixto), "origen_financiamiento"] 
 
 
 # ARMAMOS CSV CENTRO DE SALUD --------------------------------------------
-centro_de_salud.to_csv(carpeta_modelo + "centro_de_salud.csv", index=False)
+centro_de_salud.to_csv(
+    os.path.join(carpeta_modelo, "centro_de_salud.csv"),
+    index=False
+)
 
 #%%-------------------------------------------------------------------------------------------
 #LIMPIEZA DE DATOS NACIDOS VIVOS 10
 
 #columnas que queremos con los nombres que queremos
 nacidos_10 = nacidos_10[["PROVRES", "IMEDAD", "IMINSTRUC", "ITIEMGEST", "IPESONAC", "CUENTA"]].copy()
-nacidos_10["año"] = 2010
+nacidos_10["anio"] = 2010
 nacidos_10 = nacidos_10.rename(columns={
     "PROVRES" : "id_provincia",
     "IMEDAD" : "rango_edad_madre",
@@ -75,7 +95,7 @@ nacidos_10 = nacidos_10.dropna()
 #LIMPIEZA NACIDOS VIVOS 22
 #columnas que queremos con los nombres que queremos
 nacidos_22 = nacidos_22[["PROVRES", "IMEDAD", "IMINSTRUC", "ITIEMGEST", "IPESONAC", "CUENTA"]].copy()
-nacidos_22["año"] = 2022
+nacidos_22["anio"] = 2022
 nacidos_22 = nacidos_22.rename(columns={
     "PROVRES" : "id_provincia",
     "IMEDAD" : "rango_edad_madre",
@@ -102,14 +122,17 @@ nacidos_22 = nacidos_22.dropna()
 #JOIN TABLAS NACIDOS VIVOS
 nacimientoSQL = """
     SELECT * 
-    FROM nacidos_10, 
+    FROM nacidos_10 
     UNION 
     SELECT * 
     FROM nacidos_22
-    ORDER BY id_provincia, rango_edad_madre, año
+    ORDER BY id_provincia, rango_edad_madre, anio
 """
 nacimientos = dd.sql(nacimientoSQL).df()
 nacimientos = nacimientos[~nacimientos["id_provincia"].astype(str).isin(['98', '99'])]
 
 #ARMAMOS EL CSV DE NACIMIENTO
-nacimientos.to_csv(carpeta_modelo + "nacimiento.csv", index=False)
+nacimientos.to_csv(
+    os.path.join(carpeta_modelo, "nacimiento.csv"),
+    index=False
+)
