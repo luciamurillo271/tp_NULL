@@ -68,6 +68,7 @@ print(len(q1), len(q2), len(q3), len(q4))
 #GQM
 #nacidos vivos
 
+#consistencia
 # datos crudos, antes de limpiar
 total = nacidos_10["CUENTA"].sum() 
 # M1: columnas con solo código / columnas categóricas (se cuenta a mano) 
@@ -81,3 +82,10 @@ m3 = 3 / 6
 
 print(total)
 print(m2)
+
+#completitud
+total = nacidos_10["CUENTA"].sum()
+
+# M: provincia sin especificar (98)
+print("M:", nacidos_10.loc[(nacidos_10["PROVRES"] == 98) | (nacidos_10["PROVRES"] == 99), "CUENTA"].sum() / total)
+

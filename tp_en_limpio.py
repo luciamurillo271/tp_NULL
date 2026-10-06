@@ -464,7 +464,6 @@ nacidos_por_provincia_y_edad_madre_SQL = """
     ORDER BY id_provincia, grupo_etario_madre
 """
 nacidos_total = dd.sql(nacidos_por_provincia_y_edad_madre_SQL).df()
-#print(nacidos_total)
 
 cant_bajo_peso_por_prov_y_edad_madre_SQL = """
     SELECT id_provincia, grupo_etario_madre, anio, SUM(cantidad) AS cantidad
@@ -474,7 +473,6 @@ cant_bajo_peso_por_prov_y_edad_madre_SQL = """
     ORDER BY id_provincia, grupo_etario_madre
 """
 bajo_peso = dd.sql(cant_bajo_peso_por_prov_y_edad_madre_SQL).df()
-#print(bajo_peso)
 
 consulta3 = """
     SELECT t.anio, t.id_provincia, t.grupo_etario_madre, t.cantidad_total AS cantidad_nacimientos, ROUND(bp.cantidad*100.0/t.cantidad_total, 2) AS porcentaje_bajo_peso
@@ -484,7 +482,89 @@ consulta3 = """
     ORDER BY t.id_provincia, t.grupo_etario_madre, t.anio
 """
 consulta_df = dd.sql(consulta3).df()
+
 consulta_df.to_csv(
     os.path.join(carpeta_consultas, "Caracteristicas_de_los_nacimientos.csv"),
     index=False)
-#print(consulta_df)
+
+#%%--------------------------------------------------------------------------------
+#CONSULTA 4
+
+edad_fertil = ['15 a 19', '20 a 24', '25 a 29', '30 a 34', '35 a 39', '40 a 44', '45 a 49']
+
+mujeres_2022_SQL = """
+    SELECT id_provincia, grupo_etario, SUM(cantidad) AS cant_mujeres
+    FROM habitante
+    WHERE anio = 2022 AND grupo_etario IN ('15 a 19', '20 a 24', '25 a 29', '30 a 34', '35 a 39', '40 a 44', '45 a 49') AND sexo = 'mujer'
+    GROUP BY id_provincia, grupo_etario
+"""
+mujeres_2022 = dd.sql(mujeres_2022_SQL).df()
+
+nacidos_2022_SQL = """
+    SELECT id_provincia, grupo_etario_madre AS grupo_etario, SUM(cantidad) AS cant_nacidos
+    FROM nacimiento
+    WHERE anio = 2022
+    GROUP BY id_provincia, grupo_etario
+
+"""
+nacidos_2022 = dd.sql(nacidos_2022_SQL).df()
+
+tasa_fecundidad_2022_SQL = """
+    SELECT p.nombre AS provincia, m.grupo_etario, 
+    ROUND(n.cant_nacidos/m.cant_mujeres*1000, 2) AS tasa_fecundidad
+    FROM mujeres_2022 AS m
+    JOIN nacidos_2022 AS n
+    ON m.id_provincia = n.id_provincia AND m.grupo_etario = n.grupo_etario
+    JOIN provincia AS p
+    ON p.id = m.id_provincia 
+    ORDER BY p.nombre, m.grupo_etario
+"""
+tasa_fecundidad_2022 = dd.sql(tasa_fecundidad_2022_SQL).df()
+
+tasa_fecundidad_2022.to_csv(
+    os.path.join(carpeta_consultas, "Tasa_fecundidad_2022.csv"),
+    index=False)
+
+#%%---------------------------------------------------------------------------------
+#CONSULTA 5
+porcentaje_madres_menores_2022_SQL = """
+    WITH cantidades_22 AS (
+        SELECT id_provincia, SUM(cantidad) AS total_nacidos, 
+        SUM(CASE WHEN grupo_etario_madre IN ('Menor de 15','15 a 19') THEN cantidad ELSE 0 END) AS cant_madres_menores_20
+        FROM nacimiento 
+        WHERE anio = 2022
+        GROUP BY id_provincia
+    )
+    SELECT id_provincia, (cant_madres_menores_20*100.0/total_nacidos) AS porcentaje_madres_menores_2022
+    FROM cantidades_22
+    ORDER BY id_provincia
+"""
+porcentaje_madres_menores_2022 = dd.sql(porcentaje_madres_menores_2022_SQL).df()
+
+porcentaje_madres_menores_2010_SQL = """
+    WITH cantidades_10 AS (
+        SELECT id_provincia, SUM(cantidad) AS total_nacidos, 
+        SUM(CASE WHEN grupo_etario_madre IN ('Menor de 15','15 a 19') THEN cantidad ELSE 0 END) AS cant_madres_menores_20
+        FROM nacimiento 
+        WHERE anio = 2010
+        GROUP BY id_provincia
+    )
+    SELECT id_provincia, (cant_madres_menores_20*100.0/total_nacidos) AS porcentaje_madres_menores_2010
+    FROM cantidades_10
+    ORDER BY id_provincia
+"""
+porcentaje_madres_menores_2010 = dd.sql(porcentaje_madres_menores_2010_SQL).df()
+
+cambios_edad_madresSQL = """
+    SELECT p.nombre AS provincia, ROUND(p10.porcentaje_madres_menores_2010 - p22.porcentaje_madres_menores_2022, 2) AS diferencia_porcetaje
+    FROM porcentaje_madres_menores_2022 AS p22
+    JOIN porcentaje_madres_menores_2010 AS p10
+    ON p22.id_provincia = p10.id_provincia
+    JOIN provincia AS p
+    ON p.id = p22.id_provincia
+    ORDER BY diferencia_porcetaje DESC
+"""
+cambios_edad_madres = dd.sql(cambios_edad_madresSQL).df()
+
+cambios_edad_madres.to_csv(
+    os.path.join(carpeta_consultas, "Cambios_en_la_edad_de_las_madres.csv"), index=False)
