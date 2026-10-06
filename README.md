@@ -12,3 +12,8 @@ Instrucciones python
 4. df.to_csv(): Exporta un dataframe como archivo .csv.
 5. fig.savefig(‘nombre.png’): Exporta una figura de matplotlib como png.
 6. np.where(): Permite reemplazar los valores de una columna de un dataframe que cumplen con una condición dada.
+
+
+LINK DOCS: https://docs.google.com/document/d/19CFiz0Q14jQs-hWV_AtDv9tbGKs2msRdQDdpfojk084/edit?tab=t.0
+LINK DER: https://share.goodnotes.com/s/jJgPkUqqQG3SFLwULmzDby
+LINK INFORME: https://docs.google.com/document/d/1aAJeUUqholEc1bijLOJl3iXRj2RR1Xg3ZAQ1ri-5HNo/edit?usp=sharing 
