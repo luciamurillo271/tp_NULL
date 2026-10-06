@@ -457,33 +457,60 @@ establecimientos_con_terapia_intensiva.to_csv(
 
 #%%-----------------------------------------------------------------
 #CONSULTA 3: Caracteristicas de los nacimientos
-nacidos_por_provincia_y_edad_madre_SQL = """
-    SELECT id_provincia, grupo_etario_madre, anio, SUM(cantidad) AS cantidad_total
+nacidos_por_provincia_y_edad_madre_2010SQL = """
+    SELECT id_provincia, grupo_etario_madre, SUM(cantidad) AS cantidad_total
     FROM nacimiento
-    GROUP BY id_provincia, grupo_etario_madre, anio
+    WHERE anio = 2010
+    GROUP BY id_provincia, grupo_etario_madre
     ORDER BY id_provincia, grupo_etario_madre
 """
-nacidos_total = dd.sql(nacidos_por_provincia_y_edad_madre_SQL).df()
+nacidos_total_2010 = dd.sql(nacidos_por_provincia_y_edad_madre_2010SQL).df()
+    
+caracteristicas_2010_SQL = """
+    SELECT t.id_provincia, t.grupo_etario_madre, t.cantidad_total, SUM(n.cantidad) AS cantidad_bajo_peso
+    FROM nacimiento AS n
+    JOIN nacidos_total_2010 as t
+    ON t.id_provincia = n.id_provincia AND t.grupo_etario_madre = n.grupo_etario_madre
+    WHERE n.peso_bebe = 'Menos de 2500 gramos' AND n.anio = 2010
+    GROUP BY t.id_provincia, t.grupo_etario_madre, t.cantidad_total
+"""
+caracteristicas_2010 = dd.sql(caracteristicas_2010_SQL).df()
 
-cant_bajo_peso_por_prov_y_edad_madre_SQL = """
-    SELECT id_provincia, grupo_etario_madre, anio, SUM(cantidad) AS cantidad
+nacidos_por_provincia_y_edad_madre_2022SQL = """
+    SELECT id_provincia, grupo_etario_madre, SUM(cantidad) AS cantidad_total
     FROM nacimiento
-    WHERE peso_bebe = 'Menos de 2500 gramos'
-    GROUP BY id_provincia, grupo_etario_madre, anio
+    WHERE anio = 2022
+    GROUP BY id_provincia, grupo_etario_madre
     ORDER BY id_provincia, grupo_etario_madre
 """
-bajo_peso = dd.sql(cant_bajo_peso_por_prov_y_edad_madre_SQL).df()
-
-consulta3 = """
-    SELECT t.anio, t.id_provincia, t.grupo_etario_madre, t.cantidad_total AS cantidad_nacimientos, ROUND(bp.cantidad*100.0/t.cantidad_total, 2) AS porcentaje_bajo_peso
-    FROM nacidos_total AS t
-    JOIN bajo_peso AS bp
-    ON t.id_provincia = bp.id_provincia AND t.anio = bp.anio AND t.grupo_etario_madre = bp.grupo_etario_madre
-    ORDER BY t.id_provincia, t.grupo_etario_madre, t.anio
+nacidos_total_2022 = dd.sql(nacidos_por_provincia_y_edad_madre_2022SQL).df()
+    
+caracteristicas_2022_SQL = """
+    SELECT t.id_provincia, t.grupo_etario_madre, t.cantidad_total, SUM(n.cantidad) AS cantidad_bajo_peso
+    FROM nacimiento AS n
+    JOIN nacidos_total_2022 as t
+    ON t.id_provincia = n.id_provincia AND t.grupo_etario_madre = n.grupo_etario_madre
+    WHERE n.peso_bebe = 'Menos de 2500 gramos' AND n.anio = 2022
+    GROUP BY t.id_provincia, t.grupo_etario_madre, t.cantidad_total
 """
-consulta_df = dd.sql(consulta3).df()
+caracteristicas_2022 = dd.sql(caracteristicas_2022_SQL).df()
 
-consulta_df.to_csv(
+caracteristicas_nacimientos_SQL = """
+    SELECT p.nombre, c10.grupo_etario_madre, c10.cantidad_total AS cantidad_nacimientos_2010, 
+    ROUND(c10.cantidad_bajo_peso*100.0/c10.cantidad_total, 2) AS porcentaje_bajo_peso_2010,
+    c22.cantidad_total AS cantidad_nacimientos_2022, 
+    ROUND(c22.cantidad_bajo_peso*100.0/c22.cantidad_total, 2) AS porcentaje_bajo_peso_2022
+    FROM caracteristicas_2010 AS c10
+    JOIN caracteristicas_2022 AS c22
+    ON c10.id_provincia = c22.id_provincia AND c10.grupo_etario_madre = c22.grupo_etario_madre
+    JOIN provincia as p
+    ON c10.id_provincia = p.id
+    GROUP BY p.nombre, c10.grupo_etario_madre, cantidad_nacimientos_2010, porcentaje_bajo_peso_2010, cantidad_nacimientos_2022, porcentaje_bajo_peso_2022
+    ORDER BY p.nombre ASC, c10.grupo_etario_madre ASC
+"""
+caracteristicas_nacimientos = dd.sql(caracteristicas_nacimientos_SQL).df()
+
+caracteristicas_nacimientos.to_csv(
     os.path.join(carpeta_consultas, "Caracteristicas_de_los_nacimientos.csv"),
     index=False)
 
