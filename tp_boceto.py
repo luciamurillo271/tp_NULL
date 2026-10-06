@@ -66,20 +66,20 @@ centro_de_salud.to_csv(carpeta_modelo + "centro_de_salud.csv", index=False)
 #LIMPIEZA DE DATOS NACIDOS VIVOS 10
 
 #columnas que queremos con los nombres que queremos
-nacidos_10 = nacidos_10[["IMEDAD", "PROVRES", "IMINSTRUC", "ITIEMGEST", "IPESONAC", "CUENTA"]].copy()
+nacidos_10 = nacidos_10[["PROVRES", "IMEDAD", "IMINSTRUC", "ITIEMGEST", "IPESONAC", "CUENTA"]].copy()
 nacidos_10["año"] = 2010
 nacidos_10 = nacidos_10.rename(columns={
-    "IMEDAD" : "rango_edad_madre",
     "PROVRES" : "id_provincia",
+    "IMEDAD" : "rango_edad_madre",
     "IMINSTRUC": "nivel_instruccion_madre",
-    "ITIEMGEST": "tipo_gestacion",
+    "ITIEMGEST": "tiempo_gestacion",
     "IPESONAC": "peso_hijo",
     "CUENTA": "cantidad"
     })
 #queremos sacar el numero antes del rango etario, str split parte el texto en el punto, tomamos la segunda parte
 nacidos_10["rango_edad_madre"] = nacidos_10["rango_edad_madre"].str.split(".", n=1).str[1]
 nacidos_10["nivel_instruccion_madre"] = nacidos_10["nivel_instruccion_madre"].str.split(".", n=1).str[1]
-nacidos_10["tipo_gestacion"] = nacidos_10["tipo_gestacion"].str.split(".", n=1).str[1]
+nacidos_10["tiempo_gestacion"] = nacidos_10["tiempo_gestacion"].str.split(".", n=1).str[1]
 nacidos_10["peso_hijo"] = nacidos_10["peso_hijo"].str.split(".", n=1).str[1]
 #print(nacidos_10)
 
@@ -105,24 +105,24 @@ print(nacidos_10.isna().sum()) # no hay nulls explicitos
 print(nacidos_10["rango_edad_madre"].value_counts(dropna=False).sort_index())
 #print(nacidos_22.shape())
 
-#%%--------------
+#%%-----------------------------------------------------------------------------------------
 #LIMPIEZA NACIDOS VIVOS 22
 #columnas que queremos con los nombres que queremos
 print(nacidos_22.shape)
-nacidos_22 = nacidos_22[["IMEDAD", "PROVRES", "IMINSTRUC", "ITIEMGEST", "IPESONAC", "CUENTA"]].copy()
+nacidos_22 = nacidos_22[["PROVRES", "IMEDAD", "IMINSTRUC", "ITIEMGEST", "IPESONAC", "CUENTA"]].copy()
 nacidos_22["año"] = 2022
 nacidos_22 = nacidos_22.rename(columns={
-    "IMEDAD" : "rango_edad_madre",
     "PROVRES" : "id_provincia",
+    "IMEDAD" : "rango_edad_madre",
     "IMINSTRUC": "nivel_instruccion_madre",
-    "ITIEMGEST": "tipo_gestacion",
+    "ITIEMGEST": "tiempo_gestacion",
     "IPESONAC": "peso_hijo",
     "CUENTA": "cantidad"
     })
 #queremos sacar el numero antes del rango etario, str split parte el texto en el punto, tomamos la segunda parte
 nacidos_22["rango_edad_madre"] = nacidos_22["rango_edad_madre"].str.split(".", n=1).str[1]
 nacidos_22["nivel_instruccion_madre"] = nacidos_22["nivel_instruccion_madre"].str.split(".", n=1).str[1]
-nacidos_22["tipo_gestacion"] = nacidos_22["tipo_gestacion"].str.split(".", n=1).str[1]
+nacidos_22["tiempo_gestacion"] = nacidos_22["tiempo_gestacion"].str.split(".", n=1).str[1]
 nacidos_22["peso_hijo"] = nacidos_22["peso_hijo"].str.split(".", n=1).str[1]
 #print(nacidos_22)
 
@@ -234,7 +234,7 @@ censo_10 = censo_10.drop(columns=["edad", "edad_inicio","edad_fin"])
 censo_10["año"] = 2010
 print(censo_10.tail(20))
 
-#%%
+#%%-------------------------------------------------------------------------------------------
 print(censo_22.shape)
 censo_22 = censo_22.iloc[:,1:6]
 censo_22.columns = ["bloque", "edad","varon","mujer","total"]
