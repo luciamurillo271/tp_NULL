@@ -140,7 +140,7 @@ establecimientos_con_terapia_intensivaSQL = """
 establecimientos_por_provincia = dd.sql(establecimientos_con_terapia_intensivaSQL).df()
 
 establecimientos_por_provincia.to_csv(
-    os.path.join(carpeta_consultas, "Establecimientos_de_salud_por_provincia.csv"),
+    os.path.join(carpeta_analisis, "Establecimientos_de_salud_por_provincia.csv"),
     index=False)
 
 
