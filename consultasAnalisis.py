@@ -175,8 +175,17 @@ tasa_fecundidad_2010_SQL = """
 """
 tasa_fecundidad_2010 = dd.sql(tasa_fecundidad_2010_SQL).df()
 
-tasa_fecundidad_2010.to_csv(
-    os.path.join(carpeta_analisis, "Tasa_fecundidad_2010.csv"),
+tasa_fecundidad_2010_vs_2022_SQL = """
+    SELECT tf10.provincia, tf10.grupo_etario, tf10.tasa_fecundidad AS tasa_fecundidad_2010, tf22.tasa_fecundidad AS tasa_fecundidad_2022
+    FROM tasa_fecundidad_2010 AS tf10
+    JOIN tasa_fecundidad_2022 AS tf22
+    ON tf10.provincia = tf22.provincia AND tf10.grupo_etario = tf22.grupo_etario
+    ORDER BY tf10.provincia, tf10.grupo_etario
+    """
+tasa_fecundidad_2010_vs_2022 = dd.sql(tasa_fecundidad_2010_vs_2022_SQL).df()
+
+tasa_fecundidad_2010_vs_2022.to_csv(
+    os.path.join(carpeta_analisis, "Tasa_fecundidad_2010_vs_2022.csv"),
     index=False)
 
 #%%-------------------------------------------------------------------------------------
@@ -231,11 +240,11 @@ porc_habitantes_con_sin_cobertura.to_excel(
     index=False)
 
 establecimientos_por_provincia.to_excel(
-    os.path.os.path.join(carpeta_analisis, "Establecimientos_de_salud_por_provincia.xlsx"),
+    os.path.join(carpeta_analisis, "Establecimientos_de_salud_por_provincia.xlsx"),
     index=False)
 
-tasa_fecundidad_2010.to_excel(
-    os.path.join(carpeta_analisis, "Tasa_fecundidad_2010.xlsx"),
+tasa_fecundidad_2010_vs_2022.to_excel(
+    os.path.join(carpeta_analisis, "Tasa_fecundidad_2010_vs_2022.xlsx"),
     index=False)
 
 cambios_edad_madres.to_excel(
