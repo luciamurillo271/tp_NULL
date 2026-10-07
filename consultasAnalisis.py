@@ -97,6 +97,59 @@ porc_habitantes_con_sin_cobertura.to_csv(
     os.path.join(carpeta_analisis, "Cobertura_de_salud_porcentaje.csv"),
     index=False)
 
+#%%-------------------------------------------------------------------------------
+#CONSULTA 2
+establecimientos_privadosSQL = """
+    SELECT provincia_id, COUNT(*) AS cant_con_terapia_intensiva,
+    FROM centro_de_salud
+    WHERE tipologia_nombre LIKE '%terapia intensiva%' AND origen_financiamiento = 'Privado'
+    GROUP BY provincia_id
+"""
+establecimientos_privados = dd.sql(establecimientos_privadosSQL).df()
+
+establecimientos_estatalesSQL = """
+    SELECT provincia_id, COUNT(*) AS cant_con_terapia_intensiva,
+    FROM centro_de_salud
+    WHERE tipologia_nombre LIKE '%terapia intensiva%' AND origen_financiamiento = 'Estatal'
+    GROUP BY provincia_id
+"""
+establecimientos_estatales = dd.sql(establecimientos_estatalesSQL).df()
+
+establecimientos_totalesSQL = """
+    SELECT provincia_id, COUNT(*) AS cant_total_establecimientos,
+    FROM centro_de_salud
+    GROUP BY provincia_id
+"""
+establecimientos_totales = dd.sql(establecimientos_totalesSQL).df()
+
+establecimientos_con_terapia_intensivaSQL = """
+                SELECT p.nombre AS provincia, 
+                ep.cant_con_terapia_intensiva AS cantidad_establecimientos_privados_con_intensiva, 
+                ee.cant_con_terapia_intensiva AS cantidad_establecimientos_estatales_con_intensiva,
+                et.cant_total_establecimientos
+                FROM establecimientos_privados AS ep
+                JOIN establecimientos_estatales AS ee
+                ON ep.provincia_id = ee.provincia_id
+                JOIN establecimientos_totales AS et
+                ON ep.provincia_id = et.provincia_id
+                JOIN provincia AS p
+                ON ep.provincia_id = p.id
+                GROUP BY p.nombre, cantidad_establecimientos_privados_con_intensiva, cantidad_establecimientos_estatales_con_intensiva, cant_total_establecimientos
+                ORDER BY p.nombre
+            """
+establecimientos_por_provincia = dd.sql(establecimientos_con_terapia_intensivaSQL).df()
+
+establecimientos_por_provincia.to_csv(
+    os.path.join(carpeta_consultas, "Establecimientos_de_salud_por_provincia.csv"),
+    index=False)
+
+
+#%%------------------------------------------------------------------------------
+#PASAR LAS CONSULTAS NUEVAS A EXCEL
 porc_habitantes_con_sin_cobertura.to_excel(
     os.path.join(carpeta_analisis, "Cobertura_de_salud_porcentaje.xlsx"),
+    index=False)
+
+establecimientos_por_provincia.to_excel(
+    os.path.os.path.join(carpeta_analisis, "Establecimientos_de_salud_por_provincia.xlsx"),
     index=False)
