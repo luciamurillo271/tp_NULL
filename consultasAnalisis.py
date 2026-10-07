@@ -82,7 +82,9 @@ porc_habitantes_con_sin_cobertura_SQL = """
     ROUND(h10.con_cobertura*100.0/h10.total_habitantes, 2) AS porcentaje_con_cobertura_en_2010, 
     ROUND(h10.sin_cobertura*100.0/h10.total_habitantes, 2) AS porcentaje_sin_cobertura_en_2010, 
     ROUND(h22.con_cobertura*100.0/h22.total_habitantes, 2) AS porcentaje_con_cobertura_en_2022, 
-    ROUND(h22.sin_cobertura*100.0/h22.total_habitantes, 2) AS porcentaje_sin_cobertura_en_2022
+    ROUND(h22.sin_cobertura*100.0/h22.total_habitantes, 2) AS porcentaje_sin_cobertura_en_2022,
+    (porcentaje_con_cobertura_en_2022 - porcentaje_con_cobertura_en_2010) AS diferencia_porcentaje_con_cobertura,
+    (porcentaje_sin_cobertura_en_2022 - porcentaje_sin_cobertura_en_2010) AS diferencia_porcentaje_sin_cobertura
     FROM cant_habitantes_con_sin_cober_2010 AS h10
     JOIN cant_habitantes_con_sin_cober_2022 AS h22
     ON h10.grupo_etario = h22.grupo_etario AND h10.id_provincia = h22.id_provincia
