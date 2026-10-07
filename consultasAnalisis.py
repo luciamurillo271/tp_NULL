@@ -100,17 +100,17 @@ porc_habitantes_con_sin_cobertura.to_csv(
 #%%-------------------------------------------------------------------------------
 #CONSULTA 2
 establecimientos_privadosSQL = """
-    SELECT provincia_id, COUNT(*) AS cant_con_terapia_intensiva,
+    SELECT provincia_id, COUNT(*) AS cant_privados,
     FROM centro_de_salud
-    WHERE tipologia_nombre LIKE '%terapia intensiva%' AND origen_financiamiento = 'Privado'
+    WHERE origen_financiamiento = 'Privado'
     GROUP BY provincia_id
 """
 establecimientos_privados = dd.sql(establecimientos_privadosSQL).df()
 
 establecimientos_estatalesSQL = """
-    SELECT provincia_id, COUNT(*) AS cant_con_terapia_intensiva,
+    SELECT provincia_id, COUNT(*) AS cant_estatales,
     FROM centro_de_salud
-    WHERE tipologia_nombre LIKE '%terapia intensiva%' AND origen_financiamiento = 'Estatal'
+    WHERE origen_financiamiento = 'Estatal'
     GROUP BY provincia_id
 """
 establecimientos_estatales = dd.sql(establecimientos_estatalesSQL).df()
@@ -122,10 +122,10 @@ establecimientos_totalesSQL = """
 """
 establecimientos_totales = dd.sql(establecimientos_totalesSQL).df()
 
-establecimientos_con_terapia_intensivaSQL = """
+establecimientos_por_provincia_SQL = """
                 SELECT p.nombre AS provincia, 
-                ep.cant_con_terapia_intensiva AS cantidad_establecimientos_privados_con_intensiva, 
-                ee.cant_con_terapia_intensiva AS cantidad_establecimientos_estatales_con_intensiva,
+                ep.cant_privados AS cantidad_establecimientos_privados, 
+                ee.cant_estatales AS cantidad_establecimientos_estatales,
                 et.cant_total_establecimientos
                 FROM establecimientos_privados AS ep
                 JOIN establecimientos_estatales AS ee
@@ -134,10 +134,10 @@ establecimientos_con_terapia_intensivaSQL = """
                 ON ep.provincia_id = et.provincia_id
                 JOIN provincia AS p
                 ON ep.provincia_id = p.id
-                GROUP BY p.nombre, cantidad_establecimientos_privados_con_intensiva, cantidad_establecimientos_estatales_con_intensiva, cant_total_establecimientos
+                GROUP BY p.nombre, cantidad_establecimientos_privados, cantidad_establecimientos_estatales, cant_total_establecimientos
                 ORDER BY p.nombre
             """
-establecimientos_por_provincia = dd.sql(establecimientos_con_terapia_intensivaSQL).df()
+establecimientos_por_provincia = dd.sql(establecimientos_por_provincia_SQL).df()
 
 establecimientos_por_provincia.to_csv(
     os.path.join(carpeta_analisis, "Establecimientos_de_salud_por_provincia.csv"),
