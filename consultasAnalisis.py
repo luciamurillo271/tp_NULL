@@ -143,6 +143,42 @@ establecimientos_por_provincia.to_csv(
     os.path.join(carpeta_analisis, "Establecimientos_de_salud_por_provincia.csv"),
     index=False)
 
+#%%------------------------------------------------------------------------------------
+edad_fertil = ['15 a 19', '20 a 24', '25 a 29', '30 a 34', '35 a 39', '40 a 44', '45 a 49']
+
+mujeres_2010_SQL = """
+    SELECT id_provincia, grupo_etario, SUM(cantidad) AS cant_mujeres
+    FROM habitante
+    WHERE anio = 2010 AND grupo_etario IN ('15 a 19', '20 a 24', '25 a 29', '30 a 34', '35 a 39', '40 a 44', '45 a 49') AND sexo = 'mujer'
+    GROUP BY id_provincia, grupo_etario
+"""
+mujeres_2010 = dd.sql(mujeres_2010_SQL).df()
+
+nacidos_2010_SQL = """
+    SELECT id_provincia, grupo_etario_madre AS grupo_etario, SUM(cantidad) AS cant_nacidos
+    FROM nacimiento
+    WHERE anio = 2010
+    GROUP BY id_provincia, grupo_etario
+
+"""
+nacidos_2010 = dd.sql(nacidos_2010_SQL).df()
+
+tasa_fecundidad_2010_SQL = """
+    SELECT p.nombre AS provincia, m.grupo_etario, 
+    ROUND(n.cant_nacidos/m.cant_mujeres*1000, 2) AS tasa_fecundidad
+    FROM mujeres_2010 AS m
+    JOIN nacidos_2010 AS n
+    ON m.id_provincia = n.id_provincia AND m.grupo_etario = n.grupo_etario
+    JOIN provincia AS p
+    ON p.id = m.id_provincia 
+    ORDER BY p.nombre, m.grupo_etario
+"""
+tasa_fecundidad_2010 = dd.sql(tasa_fecundidad_2010_SQL).df()
+
+tasa_fecundidad_2010.to_csv(
+    os.path.join(carpeta_analisis, "Tasa_fecundidad_2010.csv"),
+    index=False)
+
 #%%-------------------------------------------------------------------------------------
 #CONSULTA 5
 porcentaje_madres_menores_2022_SQL = """
@@ -196,6 +232,10 @@ porc_habitantes_con_sin_cobertura.to_excel(
 
 establecimientos_por_provincia.to_excel(
     os.path.os.path.join(carpeta_analisis, "Establecimientos_de_salud_por_provincia.xlsx"),
+    index=False)
+
+tasa_fecundidad_2010.to_excel(
+    os.path.join(carpeta_analisis, "Tasa_fecundidad_2010.xlsx"),
     index=False)
 
 cambios_edad_madres.to_excel(
