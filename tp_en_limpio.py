@@ -420,10 +420,6 @@ cant_habitantes_con_sin_cobertura = dd.sql(cant_habitantes_con_sin_cobertura_SQL
 cant_habitantes_con_sin_cobertura.to_csv(
     os.path.join(carpeta_consultas, "Cobertura_de_salud.csv"),
     index=False)
-cant_habitantes_con_sin_cobertura.to_excel(
-    os.path.join(carpeta_consultas, "Cobertura_de_salud.xlsx"),
-    index=False
-)
 
 
 #%%---------------------------------------------------------------------
@@ -459,10 +455,7 @@ establecimientos_con_terapia_intensiva = dd.sql(establecimientos_con_terapia_int
 establecimientos_con_terapia_intensiva.to_csv(
     os.path.join(carpeta_consultas, "Establecimientos_de_salud_con_terapia_intensiva.csv"),
     index=False)
-establecimientos_con_terapia_intensiva.to_excel(
-    os.path.join(carpeta_consultas, "Establecimientos_de_salud_con_terapia_intensiva.xlsx"),
-    index=False
-)
+
 
 #%%-----------------------------------------------------------------
 #CONSULTA 3: Caracteristicas de los nacimientos
@@ -527,9 +520,6 @@ caracteristicas_nacimientos.to_csv(
     os.path.join(carpeta_consultas, "Caracteristicas_de_los_nacimientos.csv"),
     index=False)
 
-caracteristicas_nacimientos.to_excel(
-    os.path.join(carpeta_consultas, "Caracteristicas_de_los_nacimientos.xlsx"),
-    index=False)
 
 #%%--------------------------------------------------------------------------------
 #CONSULTA 4
@@ -569,9 +559,6 @@ tasa_fecundidad_2022.to_csv(
     os.path.join(carpeta_consultas, "Tasa_fecundidad_2022.csv"),
     index=False)
 
-tasa_fecundidad_2022.to_excel(
-    os.path.join(carpeta_consultas, "Tasa_fecundidad_2022.xlsx"),
-    index=False)
 
 #%%---------------------------------------------------------------------------------
 #CONSULTA 5
@@ -616,6 +603,25 @@ cambios_edad_madres = dd.sql(cambios_edad_madresSQL).df()
 
 cambios_edad_madres.to_csv(
     os.path.join(carpeta_consultas, "Cambios_en_la_edad_de_las_madres.csv"), index=False)
+
+
+#PASAR LAS CONSULTAS A EXCEL
+
+cant_habitantes_con_sin_cobertura.to_excel(
+    os.path.join(carpeta_consultas, "Cobertura_de_salud.xlsx"),
+    index=False)
+
+establecimientos_con_terapia_intensiva.to_excel(
+    os.path.join(carpeta_consultas, "Establecimientos_de_salud_con_terapia_intensiva.xlsx"),
+    index=False)
+
+caracteristicas_nacimientos.to_excel(
+    os.path.join(carpeta_consultas, "Caracteristicas_de_los_nacimientos.xlsx"),
+    index=False)
+
+tasa_fecundidad_2022.to_excel(
+    os.path.join(carpeta_consultas, "Tasa_fecundidad_2022.xlsx"),
+    index=False)
 
 cambios_edad_madres.to_excel(
     os.path.join(carpeta_consultas, "Cambios_en_la_edad_de_las_madres.xlsx"), index=False)
