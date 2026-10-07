@@ -413,13 +413,18 @@ cant_habitantes_con_sin_cobertura_SQL = """
     JOIN provincia AS p
     ON p.id = h10.id_provincia
     GROUP BY p.nombre, h10.grupo_etario, Habitantes_con_cobertura_en_2010, Habitantes_sin_cobertura_en_2010, Habitantes_con_cobertura_en_2022, Habitantes_sin_cobertura_en_2022
-    ORDER BY p.nombre, h10.grupo_etario
+    ORDER BY p.nombre, CAST(split_part(h10.grupo_etario, ' ', 1) AS INTEGER)
 """
 cant_habitantes_con_sin_cobertura = dd.sql(cant_habitantes_con_sin_cobertura_SQL).df()
 
 cant_habitantes_con_sin_cobertura.to_csv(
     os.path.join(carpeta_consultas, "Cobertura_de_salud.csv"),
     index=False)
+cant_habitantes_con_sin_cobertura.to_excel(
+    os.path.join(carpeta_consultas, "Cobertura_de_salud.xlsx"),
+    index=False
+)
+
 
 #%%---------------------------------------------------------------------
 #CONSULTA 2: Establecimientos de salud con terapia intensiva
@@ -454,6 +459,10 @@ establecimientos_con_terapia_intensiva = dd.sql(establecimientos_con_terapia_int
 establecimientos_con_terapia_intensiva.to_csv(
     os.path.join(carpeta_consultas, "Establecimientos_de_salud_con_terapia_intensiva.csv"),
     index=False)
+establecimientos_con_terapia_intensiva.to_excel(
+    os.path.join(carpeta_consultas, "Establecimientos_de_salud_con_terapia_intensiva.xlsx"),
+    index=False
+)
 
 #%%-----------------------------------------------------------------
 #CONSULTA 3: Caracteristicas de los nacimientos
@@ -506,12 +515,20 @@ caracteristicas_nacimientos_SQL = """
     JOIN provincia as p
     ON c10.id_provincia = p.id
     GROUP BY p.nombre, c10.grupo_etario_madre, cantidad_nacimientos_2010, porcentaje_bajo_peso_2010, cantidad_nacimientos_2022, porcentaje_bajo_peso_2022
-    ORDER BY p.nombre ASC, c10.grupo_etario_madre ASC
+    ORDER BY p.nombre ASC, CASE c10.grupo_etario_madre
+            WHEN 'Menor de 15' THEN 1 WHEN '15 a 19' THEN 2 WHEN '20 a 24' THEN 3 
+            WHEN '25 a 29' THEN 4 WHEN '30 a 34' THEN 5 WHEN '35 a 39' THEN 6 
+            WHEN '40 a 44' THEN 7 WHEN 'De 45 y más' THEN 8
+        END
 """
 caracteristicas_nacimientos = dd.sql(caracteristicas_nacimientos_SQL).df()
 
 caracteristicas_nacimientos.to_csv(
     os.path.join(carpeta_consultas, "Caracteristicas_de_los_nacimientos.csv"),
+    index=False)
+
+caracteristicas_nacimientos.to_excel(
+    os.path.join(carpeta_consultas, "Caracteristicas_de_los_nacimientos.xlsx"),
     index=False)
 
 #%%--------------------------------------------------------------------------------
@@ -550,6 +567,10 @@ tasa_fecundidad_2022 = dd.sql(tasa_fecundidad_2022_SQL).df()
 
 tasa_fecundidad_2022.to_csv(
     os.path.join(carpeta_consultas, "Tasa_fecundidad_2022.csv"),
+    index=False)
+
+tasa_fecundidad_2022.to_excel(
+    os.path.join(carpeta_consultas, "Tasa_fecundidad_2022.xlsx"),
     index=False)
 
 #%%---------------------------------------------------------------------------------
@@ -595,3 +616,6 @@ cambios_edad_madres = dd.sql(cambios_edad_madresSQL).df()
 
 cambios_edad_madres.to_csv(
     os.path.join(carpeta_consultas, "Cambios_en_la_edad_de_las_madres.csv"), index=False)
+
+cambios_edad_madres.to_excel(
+    os.path.join(carpeta_consultas, "Cambios_en_la_edad_de_las_madres.xlsx"), index=False)
