@@ -377,6 +377,7 @@ nacimiento = pd.read_csv(os.path.join(carpeta_modelo, "nacimiento.csv"))
 provincia = pd.read_csv(os.path.join(carpeta_modelo, "provincia.csv"))
 centro_de_salud = pd.read_csv(os.path.join(carpeta_modelo, "centro_de_salud.csv"))
 departamento = pd.read_csv(os.path.join(carpeta_modelo, "departamento.csv"))
+habitante = pd.read_csv(os.path.join(carpeta_modelo, "habitante.csv"))
 
 
 #CONSULTAS

@@ -44,6 +44,7 @@ nacimiento = pd.read_csv(os.path.join(carpeta_modelo, "nacimiento.csv"))
 provincia = pd.read_csv(os.path.join(carpeta_modelo, "provincia.csv"))
 centro_de_salud = pd.read_csv(os.path.join(carpeta_modelo, "centro_de_salud.csv"))
 departamento = pd.read_csv(os.path.join(carpeta_modelo, "departamento.csv"))
+habitante = pd.read_csv(os.path.join(carpeta_modelo, "habitante.csv"))
 
 #LEEMOS LAS TABLAS DE CONSULTAS
 establecimientos_con_terapia_intensiva = pd.read_csv(os.path.join(carpeta_consultas, "Establecimientos_de_salud_con_terapia_intensiva.csv"))
@@ -87,7 +88,7 @@ porc_habitantes_con_sin_cobertura_SQL = """
     ON h10.grupo_etario = h22.grupo_etario AND h10.id_provincia = h22.id_provincia
     JOIN provincia AS p
     ON p.id = h10.id_provincia
-    GROUP BY p.nombre, h10.grupo_etario, Habitantes_con_cobertura_en_2010, Habitantes_sin_cobertura_en_2010, Habitantes_con_cobertura_en_2022, Habitantes_sin_cobertura_en_2022
+    GROUP BY p.nombre, h10.grupo_etario, porcentaje_con_cobertura_en_2010, porcentaje_sin_cobertura_en_2010, porcentaje_con_cobertura_en_2022, porcentaje_sin_cobertura_en_2022
     ORDER BY p.nombre, CAST(split_part(h10.grupo_etario, ' ', 1) AS INTEGER)
 """
 porc_habitantes_con_sin_cobertura = dd.sql(porc_habitantes_con_sin_cobertura_SQL).df()
