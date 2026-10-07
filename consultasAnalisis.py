@@ -143,6 +143,50 @@ establecimientos_por_provincia.to_csv(
     os.path.join(carpeta_analisis, "Establecimientos_de_salud_por_provincia.csv"),
     index=False)
 
+#%%-------------------------------------------------------------------------------------
+#CONSULTA 5
+porcentaje_madres_menores_2022_SQL = """
+    WITH cantidades_22 AS (
+        SELECT id_provincia, SUM(cantidad) AS total_nacidos, 
+        SUM(CASE WHEN grupo_etario_madre IN ('Menor de 15','15 a 19') THEN cantidad ELSE 0 END) AS cant_madres_menores_20
+        FROM nacimiento 
+        WHERE anio = 2022
+        GROUP BY id_provincia
+    )
+    SELECT id_provincia, ROUND(cant_madres_menores_20*100.0/total_nacidos, 2) AS porcentaje_madres_menores_2022
+    FROM cantidades_22
+    ORDER BY id_provincia
+"""
+porcentaje_madres_menores_2022 = dd.sql(porcentaje_madres_menores_2022_SQL).df()
+
+porcentaje_madres_menores_2010_SQL = """
+    WITH cantidades_10 AS (
+        SELECT id_provincia, SUM(cantidad) AS total_nacidos, 
+        SUM(CASE WHEN grupo_etario_madre IN ('Menor de 15','15 a 19') THEN cantidad ELSE 0 END) AS cant_madres_menores_20
+        FROM nacimiento 
+        WHERE anio = 2010
+        GROUP BY id_provincia
+    )
+    SELECT id_provincia, ROUND(cant_madres_menores_20*100.0/total_nacidos, 2) AS porcentaje_madres_menores_2010
+    FROM cantidades_10
+    ORDER BY id_provincia
+"""
+porcentaje_madres_menores_2010 = dd.sql(porcentaje_madres_menores_2010_SQL).df()
+
+cambios_edad_madresSQL = """
+    SELECT p.nombre AS provincia, p10.porcentaje_madres_menores_2010, p22.porcentaje_madres_menores_2022, (p10.porcentaje_madres_menores_2010 - p22.porcentaje_madres_menores_2022) AS diferencia_porcetaje
+    FROM porcentaje_madres_menores_2022 AS p22
+    JOIN porcentaje_madres_menores_2010 AS p10
+    ON p22.id_provincia = p10.id_provincia
+    JOIN provincia AS p
+    ON p.id = p22.id_provincia
+    GROUP BY p.nombre, p10.porcentaje_madres_menores_2010, p22.porcentaje_madres_menores_2022
+    ORDER BY diferencia_porcetaje DESC
+"""
+cambios_edad_madres = dd.sql(cambios_edad_madresSQL).df()
+
+cambios_edad_madres.to_csv(
+    os.path.join(carpeta_analisis, "Cambios_en_la_edad_de_las_madres_con_porcentajes.csv"), index=False)
 
 #%%------------------------------------------------------------------------------
 #PASAR LAS CONSULTAS NUEVAS A EXCEL
@@ -152,4 +196,8 @@ porc_habitantes_con_sin_cobertura.to_excel(
 
 establecimientos_por_provincia.to_excel(
     os.path.os.path.join(carpeta_analisis, "Establecimientos_de_salud_por_provincia.xlsx"),
+    index=False)
+
+cambios_edad_madres.to_excel(
+    os.path.join(carpeta_analisis, "Cambios_en_la_edad_de_las_madres_con_porcentajes.xlsx"), 
     index=False)
