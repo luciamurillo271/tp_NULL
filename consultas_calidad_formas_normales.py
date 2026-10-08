@@ -15,6 +15,8 @@ nacidos_22 = pd.read_csv(carpeta_originales+"nacweb22_0.csv", sep = ";")
 establecimientos_de_salud = pd.read_excel(carpeta_originales+"establecimientos-asistenciales-asentados-registro-federal-refes-20220404.xlsx")
 
 #%%-------------------------------------------------------------------------------------------------------
+# Dependencias funcionales de establecimientos de salud 
+
 # localidad_id -> localidad_nombre
 consulta1 = """
     SELECT localidad_id,
@@ -61,31 +63,45 @@ consulta4 = """
 q4 = dd.sql(consulta4).df()
 print(q4)
 
-print(len(q1), len(q2), len(q3), len(q4))
-
 
 #%%------------------------------------
 #GQM
-#nacidos vivos
+
+# Nacidos vivos ----------------------------------------------------------------
 
 #consistencia
-# datos crudos, antes de limpiar
+
 total = nacidos_10["CUENTA"].sum() 
+
 # M1: columnas con solo código / columnas categóricas (se cuenta a mano) 
 m1 = 2 / 6 # TIPPARTO y SEXO, de 6 categóricas 
+
 # M2: nacimientos con "sin especificar" oculto detrás de un código 
 oculto = (nacidos_10["TIPPARTO"] == 9) | (nacidos_10["SEXO"] == 9) 
 m2 = nacidos_10.loc[oculto, "CUENTA"].sum() / total
+
  # M3: columnas con código de faltante distinto al 9 / columnas con faltante
 m3 = 3 / 6 
 # gestación (8), instrucción (4) y peso (3), de 6 columnas 
 
-print(total)
-print(m2)
 
 #completitud
-total = nacidos_10["CUENTA"].sum()
 
-# M: provincia sin especificar (98)
-print("M:", nacidos_10.loc[(nacidos_10["PROVRES"] == 98) | (nacidos_10["PROVRES"] == 99), "CUENTA"].sum() / total)
+# M: provincia sin especificar o de otro pais (98, 99)
+print("M:", nacidos_10.loc[(nacidos_10["PROVRES"] == 98) | (nacidos_10["PROVRES"] == 99), "CUENTA"].sum() / total * 100)
+
+
+# Establecimientos de salud -----------------------------------------------------
+# consistencia
+
+# M:  ids de localidad con más de un nombre 
+total_localidades = establecimientos_de_salud["localidad_id"].nunique() 
+
+malas = dd.query(""" SELECT localidad_id 
+                     FROM establecimientos_de_salud
+                     GROUP BY localidad_id 
+                     HAVING COUNT(DISTINCT localidad_nombre) > 1 """).df()
+                     
+afectados = establecimientos_de_salud["localidad_id"].isin(malas["localidad_id"]).sum()
+print("M:", len(malas) / total_localidades * 100) 
 
